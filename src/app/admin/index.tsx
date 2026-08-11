@@ -1,0 +1,597 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import {
+  getCategories,
+  getPendingBusinesses,
+  type Business,
+} from '@/services/admin';
+
+const ORANGE = '#E85D04';
+const TEXT = '#111827';
+const SECONDARY = '#6B7280';
+const BG = '#F8F9FA';
+const CARD = '#FFFFFF';
+const BORDER = '#F3F4F6';
+
+type Stats = {
+  pending: number;
+  total: number;
+  approved: number;
+  rejected: number;
+  categories: number;
+};
+
+function StatCard({
+  icon,
+  value,
+  label,
+  color,
+  bgColor,
+  onPress,
+}: {
+  icon: string;
+  value: number;
+  label: string;
+  color: string;
+  bgColor: string;
+  onPress?: () => void;
+}) {
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.statCard, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
+      onPress={onPress}>
+      <View style={[styles.statIconContainer, { backgroundColor: bgColor }]}>
+        <Text style={[styles.statIconText, { color }]}>{icon}</Text>
+      </View>
+      <View style={styles.statContent}>
+        <Text style={[styles.statValue, { color }]}>{value}</Text>
+        <Text style={styles.statLabel}>{label}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+function RecentSubmissionItem({
+  item,
+  onPress,
+}: {
+  item: Business;
+  onPress: () => void;
+}) {
+  const locationText = [item.city, item.state].filter(Boolean).join(', ') || 'N/A';
+  const dateText = item.submittedOn
+    ? new Date(item.submittedOn).toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      })
+    : 'Recently';
+
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.bizCard, pressed && { opacity: 0.94 }]}
+      onPress={onPress}>
+      {item.imageUrl ? (
+        <Image
+          source={{ uri: item.imageUrl }}
+          style={styles.bizImage}
+          contentFit="cover"
+          transition={200}
+        />
+      ) : (
+        <View style={styles.bizAvatar}>
+          <Text style={styles.bizAvatarText}>
+            {item.businessName?.charAt(0)?.toUpperCase() ?? 'B'}
+          </Text>
+        </View>
+      )}
+
+      <View style={styles.bizContent}>
+        <Text style={styles.bizName} numberOfLines={1}>
+          {item.businessName || 'Business Name'}
+        </Text>
+        <Text style={styles.bizCategory} numberOfLines={1}>
+          {item.category || 'General Business'}
+        </Text>
+        <View style={styles.bizMetaRow}>
+          <Text style={styles.bizMetaText}>📍 {locationText}</Text>
+          <Text style={styles.bizMetaDot}>•</Text>
+          <Text style={styles.bizMetaText}>📅 {dateText}</Text>
+        </View>
+      </View>
+
+      <View style={styles.statusBadge}>
+        <Text style={styles.statusIcon}>⏱️</Text>
+        <Text style={styles.statusBadgeText}>{item.status || 'Pending'}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+export default function AdminDashboard() {
+  const router = useRouter();
+  const [stats, setStats] = useState<Stats>({
+    pending: 0,
+    total: 0,
+    approved: 0,
+    rejected: 0,
+    categories: 0,
+  });
+  const [recentPending, setRecentPending] = useState<Business[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadData = async () => {
+    try {
+      const [pendingRes, catRes] = await Promise.allSettled([
+        getPendingBusinesses(),
+        getCategories(),
+      ]);
+
+      const pendingList = pendingRes.status === 'fulfilled' ? (pendingRes.value.data ?? []) : [];
+      const catList = catRes.status === 'fulfilled' ? (catRes.value.data ?? []) : [];
+
+      setRecentPending(pendingList.slice(0, 5));
+
+      const approvedCount = pendingList.filter(b => b.status === 'Approved').length;
+      const rejectedCount = pendingList.filter(b => b.status === 'Rejected').length;
+      const actualPendingCount = pendingList.filter(b => b.status === 'Pending').length || pendingList.length;
+
+      setStats({
+        pending: actualPendingCount,
+        total: pendingList.length,
+        approved: approvedCount,
+        rejected: rejectedCount,
+        categories: catList.length,
+      });
+    } catch (e) {
+      console.warn('[Admin Dashboard] load error', e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleLogout = async () => {
+    Alert.alert('Logout', 'Are you sure you want to logout from Admin Dashboard?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: async () => {
+          await AsyncStorage.multiRemove(['auth_token', 'user_data']);
+          router.replace('/');
+        },
+      },
+    ]);
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={ORANGE} />
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      {/* ── Top Header Navigation Bar ── */}
+      <View style={styles.topHeader}>
+        <Pressable style={styles.headerIconButton} onPress={handleLogout}>
+          <Text style={styles.hamburgerIcon}>☰</Text>
+        </Pressable>
+
+        <Text style={styles.headerTitle}>Admin Dashboard</Text>
+
+        <Pressable style={styles.headerIconButton} onPress={handleLogout}>
+          <View style={styles.bellWrapper}>
+            <Text style={styles.bellIcon}>🔔</Text>
+            <View style={styles.notificationDot} />
+          </View>
+        </Pressable>
+      </View>
+
+      <ScrollView
+        style={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              loadData();
+            }}
+            tintColor={ORANGE}
+          />
+        }>
+        {/* ── Stat Cards 2x2 Grid + Category Card ── */}
+        <View style={styles.statsGrid}>
+          <StatCard
+            icon="🏠"
+            value={stats.pending}
+            label="Pending Approvals"
+            color="#EA580C"
+            bgColor="#FFF2E8"
+            onPress={() => router.push('/admin/businesses')}
+          />
+          <StatCard
+            icon="💼"
+            value={stats.total}
+            label="Total Businesses"
+            color="#2563EB"
+            bgColor="#EEF4FF"
+            onPress={() => router.push('/admin/businesses')}
+          />
+          <StatCard
+            icon="✅"
+            value={stats.approved}
+            label="Approved"
+            color="#16A34A"
+            bgColor="#ECFDF5"
+            onPress={() => router.push('/admin/businesses')}
+          />
+          <StatCard
+            icon="🚫"
+            value={stats.rejected}
+            label="Rejected"
+            color="#DC2626"
+            bgColor="#FEF2F2"
+            onPress={() => router.push('/admin/businesses')}
+          />
+          <StatCard
+            icon="📂"
+            value={stats.categories}
+            label="Categories"
+            color="#9333EA"
+            bgColor="#F3E8FF"
+            onPress={() => router.push('/admin/categories')}
+          />
+        </View>
+
+        {/* ── Quick Action Pills Bar ── */}
+        <View style={styles.quickBar}>
+          <Pressable
+            style={styles.quickPill}
+            onPress={() => router.push('/admin/businesses')}>
+            <Text style={styles.quickPillText}>🏢 Manage Businesses</Text>
+          </Pressable>
+          <Pressable
+            style={styles.quickPill}
+            onPress={() => router.push('/admin/categories')}>
+            <Text style={styles.quickPillText}>📂 Manage Categories</Text>
+          </Pressable>
+          <Pressable
+            style={styles.quickPill}
+            onPress={() => router.push('/admin/approvals')}>
+            <Text style={styles.quickPillText}>✅ Approvals</Text>
+          </Pressable>
+        </View>
+
+        {/* ── Recent Submissions Section ── */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recent Submissions</Text>
+          <Pressable
+            style={styles.viewAllButton}
+            onPress={() => router.push('/admin/businesses')}>
+            <Text style={styles.viewAllText}>View All</Text>
+            <Text style={styles.viewAllArrow}>›</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.submissionsList}>
+          {recentPending.length === 0 ? (
+            <View style={styles.emptyBox}>
+              <Text style={styles.emptyIcon}>📭</Text>
+              <Text style={styles.emptyText}>No pending submissions</Text>
+            </View>
+          ) : (
+            recentPending.map(item => (
+              <RecentSubmissionItem
+                key={item.id}
+                item={item}
+                onPress={() =>
+                  router.push({
+                    pathname: '/admin/business-detail',
+                    params: { id: item.id },
+                  })
+                }
+              />
+            ))
+          )}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: BG,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: BG,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+
+  /* Top Navigation Bar */
+  topHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    backgroundColor: CARD,
+    borderBottomWidth: 1,
+    borderBottomColor: BORDER,
+  },
+  headerIconButton: {
+    padding: 6,
+  },
+  hamburgerIcon: {
+    fontSize: 22,
+    color: TEXT,
+    fontWeight: '600',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: TEXT,
+    letterSpacing: -0.3,
+  },
+  bellWrapper: {
+    position: 'relative',
+  },
+  bellIcon: {
+    fontSize: 20,
+  },
+  notificationDot: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#EF4444',
+  },
+
+  /* Stat Cards Grid */
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 16,
+    paddingTop: 18,
+    gap: 12,
+  },
+  statCard: {
+    backgroundColor: CARD,
+    borderRadius: 18,
+    padding: 16,
+    width: '48%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: BORDER,
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1.5,
+  },
+  statIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  statIconText: {
+    fontSize: 20,
+  },
+  statContent: {
+    flex: 1,
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  statLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: SECONDARY,
+    marginTop: 2,
+    lineHeight: 14,
+  },
+
+  /* Quick Pills Bar */
+  quickBar: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    marginTop: 16,
+    gap: 8,
+  },
+  quickPill: {
+    backgroundColor: CARD,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: BORDER,
+  },
+  quickPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: TEXT,
+  },
+
+  /* Section Header */
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginTop: 24,
+    marginBottom: 14,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: TEXT,
+    letterSpacing: -0.3,
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  viewAllText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: ORANGE,
+    marginRight: 4,
+  },
+  viewAllArrow: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: ORANGE,
+  },
+
+  /* Submissions List */
+  submissionsList: {
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  bizCard: {
+    backgroundColor: CARD,
+    borderRadius: 18,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: BORDER,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1.5,
+  },
+  bizImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 14,
+    marginRight: 12,
+    backgroundColor: '#F3F4F6',
+  },
+  bizAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 14,
+    backgroundColor: ORANGE + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  bizAvatarText: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: ORANGE,
+  },
+  bizContent: {
+    flex: 1,
+  },
+  bizName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: TEXT,
+    letterSpacing: -0.2,
+  },
+  bizCategory: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: SECONDARY,
+    marginTop: 2,
+  },
+  bizMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  bizMetaText: {
+    fontSize: 11,
+    color: SECONDARY,
+  },
+  bizMetaDot: {
+    fontSize: 11,
+    color: SECONDARY,
+    marginHorizontal: 4,
+  },
+
+  /* Status Badge */
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    gap: 4,
+  },
+  statusIcon: {
+    fontSize: 10,
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#EA580C',
+  },
+
+  /* Empty Box */
+  emptyBox: {
+    alignItems: 'center',
+    paddingVertical: 36,
+    backgroundColor: CARD,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: BORDER,
+  },
+  emptyIcon: {
+    fontSize: 32,
+    marginBottom: 6,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: SECONDARY,
+    fontWeight: '500',
+  },
+});

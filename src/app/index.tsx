@@ -1,98 +1,203 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
+import {
+  Dimensions,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function HomeScreen() {
+  const router = useRouter();
+
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
+        {/* ── TOP: Guru mascot ── */}
+        <View style={styles.mascotWrapper}>
+          <Image
+            source={require('@/assets/logo/logo.png')}
+            style={styles.mascot}
+            contentFit="contain"
           />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+        </View>
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
+        {/* ── Branding ── */}
+        <View style={styles.brandWrapper}>
+          <Text style={styles.brandTitle}>
+            <Text style={styles.brandBlack}>Connect </Text>
+            <Text style={styles.brandOrange}>Guru</Text>
+          </Text>
+
+          <Text style={styles.tagline}>
+            <Text style={styles.taglineBlack}>Find</Text>
+            <Text style={styles.taglineDot}>. </Text>
+            <Text style={styles.taglineBlack}>Connect</Text>
+            <Text style={styles.taglineDot}>. </Text>
+            <Text style={styles.taglineBlack}>Grow</Text>
+            <Text style={styles.taglineDot}>.</Text>
+          </Text>
+
+          <Text style={styles.subtitle}>India's Trusted Business Directory</Text>
+        </View>
+
+        {/* ── BOTTOM: City skyline ── */}
+        <View style={styles.cityWrapper}>
+          <Image
+            source={require('@/assets/logo/below.png')}
+            style={styles.cityImage}
+            contentFit="cover"
+          />
+        </View>
+
+        {/* ── Buttons ── */}
+        <View style={styles.buttonsWrapper}>
+          <Pressable
+            style={({ pressed }) => [styles.btnGetStarted, pressed && styles.btnPressed]}
+            onPress={() => router.push('/register')}>
+            <Text style={styles.btnGetStartedText}>Get Started</Text>
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [styles.btnLogin, pressed && styles.btnPressed]}
+            onPress={() => router.push('/login')}>
+            <Text style={styles.btnLoginText}>Login</Text>
+          </Pressable>
+        </View>
+
+        {/* ── Footer ── */}
+        <Text style={styles.footer}>Find businesses, products &amp; services near you.</Text>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
   safeArea: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+    backgroundColor: '#ffffff',
   },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  container: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingBottom: 16,
   },
-  title: {
+
+  /* Mascot */
+  mascotWrapper: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  mascot: {
+    width: SCREEN_WIDTH * 0.52,
+    height: SCREEN_WIDTH * 0.52,
+  },
+
+  /* Brand */
+  brandWrapper: {
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 4,
+  },
+  brandTitle: {
+    fontSize: 38,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+    lineHeight: 46,
+  },
+  brandBlack: {
+    color: '#1a1a1a',
+  },
+  brandOrange: {
+    color: '#E85D04',
+  },
+  tagline: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  taglineBlack: {
+    color: '#1a1a1a',
+  },
+  taglineDot: {
+    color: '#E85D04',
+    fontWeight: '700',
+  },
+  subtitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginTop: 2,
+    letterSpacing: 0.2,
+  },
+
+  /* City skyline */
+  cityWrapper: {
+    flex: 1,
+    width: '100%',
+    marginTop: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
+    maxHeight: 200,
+  },
+  cityImage: {
+    width: '100%',
+    height: '100%',
+  },
+
+  /* Buttons */
+  buttonsWrapper: {
+    width: '100%',
+    gap: 12,
+    marginTop: 20,
+  },
+  btnGetStarted: {
+    backgroundColor: '#E85D04',
+    borderRadius: 50,
+    paddingVertical: 16,
+    alignItems: 'center',
+    shadowColor: '#E85D04',
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  btnGetStartedText: {
+    color: '#ffffff',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  btnLogin: {
+    backgroundColor: '#ffffff',
+    borderRadius: 50,
+    paddingVertical: 15,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#d1d5db',
+  },
+  btnLoginText: {
+    color: '#1a1a1a',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  btnPressed: {
+    opacity: 0.8,
+  },
+
+  /* Footer */
+  footer: {
+    marginTop: 14,
+    fontSize: 12,
+    color: '#6b7280',
     textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
   },
 });
