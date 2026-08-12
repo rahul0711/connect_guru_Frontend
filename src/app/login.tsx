@@ -46,6 +46,8 @@ export default function LoginScreen() {
         const role = res.data?.role;
         if (role === 'Admin') {
           router.replace('/admin');
+        } else if (role === 'Business') {
+          router.replace('/business');
         } else {
           router.replace('/home');
         }

@@ -15,8 +15,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
+  getAllBusinessesAdmin,
   getCategories,
-  getPendingBusinesses,
+  resolveBusinessCategoryName,
+  resolveBusinessId,
+  resolveBusinessImageUrl,
   type Business,
 } from '@/services/admin';
 
@@ -72,9 +75,11 @@ function RecentSubmissionItem({
   item: Business;
   onPress: () => void;
 }) {
-  const locationText = [item.city, item.state].filter(Boolean).join(', ') || 'N/A';
-  const dateText = item.submittedOn
-    ? new Date(item.submittedOn).toLocaleDateString('en-IN', {
+  const imageUrl = resolveBusinessImageUrl(item);
+  const categoryName = resolveBusinessCategoryName(item);
+  const locationText = [item.address, item.city, item.state].filter(Boolean).join(', ') || 'N/A';
+  const dateText = item.createdAt || item.submittedOn
+    ? new Date(item.createdAt || item.submittedOn!).toLocaleDateString('en-IN', {
         day: '2-digit',
         month: 'short',
         year: 'numeric',
@@ -85,9 +90,9 @@ function RecentSubmissionItem({
     <Pressable
       style={({ pressed }) => [styles.bizCard, pressed && { opacity: 0.94 }]}
       onPress={onPress}>
-      {item.imageUrl ? (
+      {imageUrl ? (
         <Image
-          source={{ uri: item.imageUrl }}
+          source={{ uri: imageUrl }}
           style={styles.bizImage}
           contentFit="cover"
           transition={200}
@@ -105,10 +110,10 @@ function RecentSubmissionItem({
           {item.businessName || 'Business Name'}
         </Text>
         <Text style={styles.bizCategory} numberOfLines={1}>
-          {item.category || 'General Business'}
+          {categoryName}
         </Text>
         <View style={styles.bizMetaRow}>
-          <Text style={styles.bizMetaText}>📍 {locationText}</Text>
+          <Text style={styles.bizMetaText} numberOfLines={1}>📍 {locationText}</Text>
           <Text style={styles.bizMetaDot}>•</Text>
           <Text style={styles.bizMetaText}>📅 {dateText}</Text>
         </View>
@@ -137,23 +142,23 @@ export default function AdminDashboard() {
 
   const loadData = async () => {
     try {
-      const [pendingRes, catRes] = await Promise.allSettled([
-        getPendingBusinesses(),
+      const [allRes, catRes] = await Promise.allSettled([
+        getAllBusinessesAdmin(),
         getCategories(),
       ]);
 
-      const pendingList = pendingRes.status === 'fulfilled' ? (pendingRes.value.data ?? []) : [];
+      const allList = allRes.status === 'fulfilled' ? (allRes.value.data ?? []) : [];
       const catList = catRes.status === 'fulfilled' ? (catRes.value.data ?? []) : [];
 
-      setRecentPending(pendingList.slice(0, 5));
+      const pendingList = allList.filter(b => b.status === 'Pending');
+      const approvedCount = allList.filter(b => b.status === 'Approved').length;
+      const rejectedCount = allList.filter(b => b.status === 'Rejected').length;
 
-      const approvedCount = pendingList.filter(b => b.status === 'Approved').length;
-      const rejectedCount = pendingList.filter(b => b.status === 'Rejected').length;
-      const actualPendingCount = pendingList.filter(b => b.status === 'Pending').length || pendingList.length;
+      setRecentPending(pendingList.length > 0 ? pendingList.slice(0, 5) : allList.slice(0, 5));
 
       setStats({
-        pending: actualPendingCount,
-        total: pendingList.length,
+        pending: pendingList.length,
+        total: allList.length,
         approved: approvedCount,
         rejected: rejectedCount,
         categories: catList.length,
@@ -268,8 +273,12 @@ export default function AdminDashboard() {
           />
         </View>
 
-        {/* ── Quick Action Pills Bar ── */}
-        <View style={styles.quickBar}>
+        {/* ── Quick Action Pills Bar (Movable / Horizontally Scrollable) ── */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.quickBarScroll}
+          contentContainerStyle={styles.quickBarContent}>
           <Pressable
             style={styles.quickPill}
             onPress={() => router.push('/admin/businesses')}>
@@ -285,7 +294,7 @@ export default function AdminDashboard() {
             onPress={() => router.push('/admin/approvals')}>
             <Text style={styles.quickPillText}>✅ Approvals</Text>
           </Pressable>
-        </View>
+        </ScrollView>
 
         {/* ── Recent Submissions Section ── */}
         <View style={styles.sectionHeader}>
@@ -302,17 +311,17 @@ export default function AdminDashboard() {
           {recentPending.length === 0 ? (
             <View style={styles.emptyBox}>
               <Text style={styles.emptyIcon}>📭</Text>
-              <Text style={styles.emptyText}>No pending submissions</Text>
+              <Text style={styles.emptyText}>No business submissions found</Text>
             </View>
           ) : (
             recentPending.map(item => (
               <RecentSubmissionItem
-                key={item.id}
+                key={resolveBusinessId(item)}
                 item={item}
                 onPress={() =>
                   router.push({
                     pathname: '/admin/business-detail',
-                    params: { id: item.id },
+                    params: { id: resolveBusinessId(item) },
                   })
                 }
               />
@@ -434,10 +443,13 @@ const styles = StyleSheet.create({
   },
 
   /* Quick Pills Bar */
-  quickBar: {
+  quickBarScroll: {
+    marginTop: 16,
+    flexGrow: 0,
+  },
+  quickBarContent: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    marginTop: 16,
     gap: 8,
   },
   quickPill: {

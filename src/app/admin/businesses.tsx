@@ -7,6 +7,7 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -16,8 +17,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   approveBusiness,
-  getPendingBusinesses,
+  getAllBusinessesAdmin,
   rejectBusiness,
+  resolveBusinessCategoryName,
+  resolveBusinessId,
+  resolveBusinessImageUrl,
+  suspendBusiness,
   type Business,
   type BusinessStatus,
 } from '@/services/admin';
@@ -42,7 +47,7 @@ export default function AdminBusinesses() {
 
   const load = async () => {
     try {
-      const res = await getPendingBusinesses();
+      const res = await getAllBusinessesAdmin();
       setAllData(res.data ?? []);
     } catch {
       Alert.alert('Error', 'Could not load businesses.');
@@ -60,6 +65,7 @@ export default function AdminBusinesses() {
   const pendingCount = allData.filter(b => b.status === 'Pending').length;
   const approvedCount = allData.filter(b => b.status === 'Approved').length;
   const rejectedCount = allData.filter(b => b.status === 'Rejected').length;
+  const suspendedCount = allData.filter(b => b.status === 'Suspended').length;
   const totalCount = allData.length;
 
   const filtered = allData.filter(b => {
@@ -67,12 +73,19 @@ export default function AdminBusinesses() {
     const matchSearch =
       !search ||
       b.businessName?.toLowerCase().includes(search.toLowerCase()) ||
-      b.city?.toLowerCase().includes(search.toLowerCase());
+      b.city?.toLowerCase().includes(search.toLowerCase()) ||
+      b.address?.toLowerCase().includes(search.toLowerCase());
     return matchTab && matchSearch;
   });
 
-  const handleApprove = (id: number) => {
-    Alert.alert('Approve Business', 'Are you sure you want to approve this business?', [
+  const handleApprove = (id: number, currentStatus?: string) => {
+    const isReapprove = currentStatus === 'Suspended' || currentStatus === 'Rejected';
+    const title = isReapprove ? 'Re-Approve Business' : 'Approve Business';
+    const msg = isReapprove
+      ? 'Re-approving will make this business active and public again.'
+      : 'Are you sure you want to approve this business?';
+
+    Alert.alert(title, msg, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Approve',
@@ -81,7 +94,7 @@ export default function AdminBusinesses() {
             setActionId(id);
             await approveBusiness(id);
             setAllData(prev =>
-              prev.map(b => (b.id === id ? { ...b, status: 'Approved' } : b))
+              prev.map(b => (resolveBusinessId(b) === id ? { ...b, status: 'Approved' } : b))
             );
             Alert.alert('Success', 'Business approved successfully.');
           } catch {
@@ -104,7 +117,7 @@ export default function AdminBusinesses() {
           setActionId(id);
           await rejectBusiness(id, reason);
           setAllData(prev =>
-            prev.map(b => (b.id === id ? { ...b, status: 'Rejected' } : b))
+            prev.map(b => (resolveBusinessId(b) === id ? { ...b, status: 'Rejected', rejectionReason: reason } : b))
           );
           Alert.alert('Success', 'Business rejected.');
         } catch {
@@ -117,6 +130,30 @@ export default function AdminBusinesses() {
     );
   };
 
+  const handleSuspend = (id: number) => {
+    Alert.alert('Suspend Business', 'Suspending will hide this business from public search results.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Suspend',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            setActionId(id);
+            await suspendBusiness(id);
+            setAllData(prev =>
+              prev.map(b => (resolveBusinessId(b) === id ? { ...b, status: 'Suspended' } : b))
+            );
+            Alert.alert('Success', 'Business suspended.');
+          } catch {
+            Alert.alert('Error', 'Could not suspend business.');
+          } finally {
+            setActionId(null);
+          }
+        },
+      },
+    ]);
+  };
+
   const getTabCount = (tab: TabOption) => {
     switch (tab) {
       case 'Pending':
@@ -125,6 +162,8 @@ export default function AdminBusinesses() {
         return approvedCount;
       case 'Rejected':
         return rejectedCount;
+      case 'Suspended':
+        return suspendedCount;
       case 'All':
         return totalCount;
       default:
@@ -133,13 +172,18 @@ export default function AdminBusinesses() {
   };
 
   const renderItem = ({ item }: { item: Business }) => {
+    const bizId = resolveBusinessId(item);
+    const imageUrl = resolveBusinessImageUrl(item);
+    const categoryName = resolveBusinessCategoryName(item);
+
     const isPending = item.status === 'Pending';
     const isApproved = item.status === 'Approved';
     const isRejected = item.status === 'Rejected';
+    const isSuspended = item.status === 'Suspended';
 
-    const locationText = [item.city, item.state].filter(Boolean).join(', ') || 'N/A';
-    const dateText = item.submittedOn
-      ? new Date(item.submittedOn).toLocaleDateString('en-IN', {
+    const locationText = [item.address, item.city, item.state].filter(Boolean).join(', ') || 'N/A';
+    const dateText = item.createdAt || item.submittedOn
+      ? new Date(item.createdAt || item.submittedOn!).toLocaleDateString('en-IN', {
           day: '2-digit',
           month: 'short',
           year: 'numeric',
@@ -151,10 +195,10 @@ export default function AdminBusinesses() {
         <Pressable
           style={styles.cardTop}
           onPress={() =>
-            router.push({ pathname: '/admin/business-detail', params: { id: item.id } })
+            router.push({ pathname: '/admin/business-detail', params: { id: bizId } })
           }>
-          {item.imageUrl ? (
-            <Image source={{ uri: item.imageUrl }} style={styles.bizImage} contentFit="cover" />
+          {imageUrl ? (
+            <Image source={{ uri: imageUrl }} style={styles.bizImage} contentFit="cover" />
           ) : (
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>
@@ -168,9 +212,9 @@ export default function AdminBusinesses() {
               {item.businessName || 'Business Name'}
             </Text>
             <Text style={styles.bizSub} numberOfLines={1}>
-              {item.category || 'General Business'}
+              {categoryName}
             </Text>
-            <Text style={styles.bizMeta}>📍 {locationText}</Text>
+            <Text style={styles.bizMeta} numberOfLines={1}>📍 {locationText}</Text>
             <Text style={styles.bizMetaDate}>📅 Submitted on {dateText}</Text>
           </View>
 
@@ -179,15 +223,17 @@ export default function AdminBusinesses() {
               styles.statusBadge,
               isApproved && styles.statusBadgeApproved,
               isRejected && styles.statusBadgeRejected,
+              isSuspended && styles.statusBadgeSuspended,
             ]}>
             <Text style={styles.statusBadgeIcon}>
-              {isApproved ? '✅' : isRejected ? '🚫' : '⏱️'}
+              {isApproved ? '✅' : isRejected ? '🚫' : isSuspended ? '⏸' : '⏱️'}
             </Text>
             <Text
               style={[
                 styles.statusBadgeText,
                 isApproved && styles.statusBadgeTextApproved,
                 isRejected && styles.statusBadgeTextRejected,
+                isSuspended && styles.statusBadgeTextSuspended,
               ]}>
               {item.status || 'Pending'}
             </Text>
@@ -199,7 +245,7 @@ export default function AdminBusinesses() {
           <Pressable
             style={styles.actionBtnView}
             onPress={() =>
-              router.push({ pathname: '/admin/business-detail', params: { id: item.id } })
+              router.push({ pathname: '/admin/business-detail', params: { id: bizId } })
             }>
             <Text style={styles.actionBtnViewText}>👁️ View</Text>
           </Pressable>
@@ -208,9 +254,9 @@ export default function AdminBusinesses() {
             <>
               <Pressable
                 style={styles.actionBtnApprove}
-                onPress={() => handleApprove(item.id)}
-                disabled={actionId === item.id}>
-                {actionId === item.id ? (
+                onPress={() => handleApprove(bizId, item.status)}
+                disabled={actionId === bizId}>
+                {actionId === bizId ? (
                   <ActivityIndicator size="small" color="#16A34A" />
                 ) : (
                   <Text style={styles.actionBtnApproveText}>✓ Approve</Text>
@@ -219,10 +265,56 @@ export default function AdminBusinesses() {
 
               <Pressable
                 style={styles.actionBtnReject}
-                onPress={() => handleReject(item.id)}
-                disabled={actionId === item.id}>
+                onPress={() => handleReject(bizId)}
+                disabled={actionId === bizId}>
                 <Text style={styles.actionBtnRejectText}>✕ Reject</Text>
               </Pressable>
+            </>
+          )}
+
+          {isApproved && (
+            <>
+              <Pressable
+                style={styles.actionBtnSuspend}
+                onPress={() => handleSuspend(bizId)}
+                disabled={actionId === bizId}>
+                {actionId === bizId ? (
+                  <ActivityIndicator size="small" color="#6B7280" />
+                ) : (
+                  <Text style={styles.actionBtnSuspendText}>⏸ Suspend</Text>
+                )}
+              </Pressable>
+
+              <Pressable
+                style={styles.actionBtnReject}
+                onPress={() => handleReject(bizId)}
+                disabled={actionId === bizId}>
+                <Text style={styles.actionBtnRejectText}>✕ Reject</Text>
+              </Pressable>
+            </>
+          )}
+
+          {(isSuspended || isRejected) && (
+            <>
+              <Pressable
+                style={styles.actionBtnApprove}
+                onPress={() => handleApprove(bizId, item.status)}
+                disabled={actionId === bizId}>
+                {actionId === bizId ? (
+                  <ActivityIndicator size="small" color="#16A34A" />
+                ) : (
+                  <Text style={styles.actionBtnApproveText}>✓ Re-Approve</Text>
+                )}
+              </Pressable>
+
+              {isSuspended && (
+                <Pressable
+                  style={styles.actionBtnReject}
+                  onPress={() => handleReject(bizId)}
+                  disabled={actionId === bizId}>
+                  <Text style={styles.actionBtnRejectText}>✕ Reject</Text>
+                </Pressable>
+              )}
             </>
           )}
         </View>
@@ -243,9 +335,13 @@ export default function AdminBusinesses() {
         </Pressable>
       </View>
 
-      {/* Tabs Row */}
-      <View style={styles.tabsContainer}>
-        {(['Pending', 'Approved', 'Rejected', 'All'] as TabOption[]).map(tab => {
+      {/* Tabs Row (Horizontally Movable) */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabsScroll}
+        contentContainerStyle={styles.tabsContainer}>
+        {(['Pending', 'Approved', 'Rejected', 'Suspended', 'All'] as TabOption[]).map(tab => {
           const isActive = activeTab === tab;
           const count = getTabCount(tab);
 
@@ -276,7 +372,7 @@ export default function AdminBusinesses() {
             </Pressable>
           );
         })}
-      </View>
+      </ScrollView>
 
       {/* Search Input Bar */}
       <View style={styles.searchSection}>
@@ -300,7 +396,7 @@ export default function AdminBusinesses() {
       ) : (
         <FlatList
           data={filtered}
-          keyExtractor={i => String(i.id)}
+          keyExtractor={i => String(resolveBusinessId(i))}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
@@ -345,13 +441,16 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 17, fontWeight: '700', color: TEXT, letterSpacing: -0.3 },
 
   /* Tabs */
-  tabsContainer: {
-    flexDirection: 'row',
+  tabsScroll: {
     backgroundColor: CARD,
-    paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: BORDER,
-    justifyContent: 'space-between',
+    flexGrow: 0,
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    gap: 16,
   },
   tabItem: {
     paddingVertical: 12,
@@ -362,10 +461,10 @@ const styles = StyleSheet.create({
   tabItemRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: SECONDARY,
   },
@@ -376,16 +475,16 @@ const styles = StyleSheet.create({
   tabBadge: {
     backgroundColor: '#F3F4F6',
     borderRadius: 12,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    minWidth: 20,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    minWidth: 18,
     alignItems: 'center',
   },
   tabBadgeActive: {
     backgroundColor: ORANGE,
   },
   tabBadgeText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     color: SECONDARY,
   },
@@ -493,10 +592,12 @@ const styles = StyleSheet.create({
   },
   statusBadgeApproved: { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' },
   statusBadgeRejected: { backgroundColor: '#FEF2F2', borderColor: '#FECACA' },
+  statusBadgeSuspended: { backgroundColor: '#F3F4F6', borderColor: '#D1D5DB' },
   statusBadgeIcon: { fontSize: 10 },
   statusBadgeText: { fontSize: 11, fontWeight: '700', color: '#EA580C' },
   statusBadgeTextApproved: { color: '#16A34A' },
   statusBadgeTextRejected: { color: '#DC2626' },
+  statusBadgeTextSuspended: { color: '#6B7280' },
 
   /* Actions Bar */
   actions: {
@@ -539,6 +640,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionBtnRejectText: { fontSize: 13, fontWeight: '700', color: '#DC2626' },
+
+  actionBtnSuspend: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+  },
+  actionBtnSuspendText: { fontSize: 13, fontWeight: '700', color: '#6B7280' },
 
   empty: { alignItems: 'center', paddingVertical: 60 },
   emptyIcon: { fontSize: 32, marginBottom: 6 },

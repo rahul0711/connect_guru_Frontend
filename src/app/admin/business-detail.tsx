@@ -16,6 +16,9 @@ import {
   approveBusiness,
   getAdminBusinessDetail,
   rejectBusiness,
+  resolveBusinessCategoryName,
+  resolveBusinessId,
+  resolveBusinessImageUrl,
   suspendBusiness,
   type Business,
 } from '@/services/admin';
@@ -27,11 +30,11 @@ const BG = '#F8F9FA';
 const CARD = '#FFFFFF';
 const BORDER = '#F3F4F6';
 
-function InfoRow({ label, value }: { label: string; value?: string }) {
+function InfoRow({ label, value }: { label: string; value?: string | null }) {
   return (
     <View style={styles.infoRow}>
       <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value ?? '—'}</Text>
+      <Text style={styles.infoValue}>{value || '—'}</Text>
     </View>
   );
 }
@@ -53,7 +56,13 @@ export default function BusinessDetailScreen() {
   }, [numId]);
 
   const handleApprove = () => {
-    Alert.alert('Approve Business', 'Are you sure you want to approve this business listing?', [
+    const isReapprove = biz?.status === 'Suspended' || biz?.status === 'Rejected';
+    const title = isReapprove ? 'Re-Approve Business' : 'Approve Business';
+    const msg = isReapprove
+      ? 'Re-approving this business will make it active and visible in public searches again.'
+      : 'Approving this business will publish it live.';
+
+    Alert.alert(title, msg, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Approve',
@@ -61,7 +70,7 @@ export default function BusinessDetailScreen() {
           try {
             setActionLoading(true);
             await approveBusiness(numId);
-            setBiz(prev => (prev ? { ...prev, status: 'Approved' } : prev));
+            setBiz(prev => (prev ? { ...prev, status: 'Approved', approvedAt: new Date().toISOString() } : prev));
             Alert.alert('Success', 'Business approved successfully.');
           } catch {
             Alert.alert('Error', 'Could not approve business.');
@@ -82,7 +91,7 @@ export default function BusinessDetailScreen() {
         try {
           setActionLoading(true);
           await rejectBusiness(numId, reason);
-          setBiz(prev => (prev ? { ...prev, status: 'Rejected' } : prev));
+          setBiz(prev => (prev ? { ...prev, status: 'Rejected', rejectionReason: reason } : prev));
           Alert.alert('Success', 'Business rejected.');
         } catch {
           Alert.alert('Error', 'Could not reject business.');
@@ -95,7 +104,7 @@ export default function BusinessDetailScreen() {
   };
 
   const handleSuspend = () => {
-    Alert.alert('Suspend Business', 'Are you sure you want to suspend this business listing?', [
+    Alert.alert('Suspend Business', 'Suspending will immediately hide this business from public search results.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Suspend',
@@ -105,7 +114,7 @@ export default function BusinessDetailScreen() {
             setActionLoading(true);
             await suspendBusiness(numId);
             setBiz(prev => (prev ? { ...prev, status: 'Suspended' } : prev));
-            Alert.alert('Success', 'Business suspended.');
+            Alert.alert('Suspended', 'Business suspended successfully.');
           } catch {
             Alert.alert('Error', 'Could not suspend business.');
           } finally {
@@ -135,16 +144,33 @@ export default function BusinessDetailScreen() {
   const isPending = biz.status === 'Pending';
   const isApproved = biz.status === 'Approved';
   const isRejected = biz.status === 'Rejected';
-  const locationText = [biz.city, biz.state].filter(Boolean).join(', ') || 'N/A';
-  const formattedDate = biz.submittedOn
-    ? new Date(biz.submittedOn).toLocaleString('en-IN', {
+  const isSuspended = biz.status === 'Suspended';
+
+  const imageUrl = resolveBusinessImageUrl(biz);
+  const categoryName = resolveBusinessCategoryName(biz);
+  const fullAddress = [biz.address, biz.city, biz.state, biz.country, biz.pincode]
+    .filter(Boolean)
+    .join(', ') || 'N/A';
+
+  const createdAtText = biz.createdAt || biz.submittedOn
+    ? new Date(biz.createdAt || biz.submittedOn!).toLocaleString('en-IN', {
         day: '2-digit',
         month: 'short',
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
       })
-    : '18 May 2025, 10:30 AM';
+    : 'N/A';
+
+  const approvedAtText = biz.approvedAt
+    ? new Date(biz.approvedAt).toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : null;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -160,8 +186,8 @@ export default function BusinessDetailScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Hero Card */}
         <View style={styles.heroCard}>
-          {biz.imageUrl ? (
-            <Image source={{ uri: biz.imageUrl }} style={styles.heroImage} contentFit="cover" />
+          {imageUrl ? (
+            <Image source={{ uri: imageUrl }} style={styles.heroImage} contentFit="cover" />
           ) : (
             <View style={styles.heroAvatar}>
               <Text style={styles.heroAvatarText}>
@@ -172,8 +198,8 @@ export default function BusinessDetailScreen() {
 
           <View style={styles.heroInfo}>
             <Text style={styles.heroName}>{biz.businessName || 'Business Name'}</Text>
-            <Text style={styles.heroSub}>{biz.category || 'General Service'}</Text>
-            <Text style={styles.heroLocation}>📍 {locationText}</Text>
+            <Text style={styles.heroSub}>{categoryName}</Text>
+            <Text style={styles.heroLocation}>📍 {[biz.city, biz.state].filter(Boolean).join(', ') || 'N/A'}</Text>
           </View>
 
           <View
@@ -181,20 +207,44 @@ export default function BusinessDetailScreen() {
               styles.statusBadge,
               isApproved && styles.statusBadgeApproved,
               isRejected && styles.statusBadgeRejected,
+              isSuspended && styles.statusBadgeSuspended,
             ]}>
             <Text style={styles.statusBadgeIcon}>
-              {isApproved ? '✅' : isRejected ? '🚫' : '⏱️'}
+              {isApproved ? '✅' : isRejected ? '🚫' : isSuspended ? '⏸' : '⏱️'}
             </Text>
             <Text
               style={[
                 styles.statusBadgeText,
                 isApproved && styles.statusBadgeTextApproved,
                 isRejected && styles.statusBadgeTextRejected,
+                isSuspended && styles.statusBadgeTextSuspended,
               ]}>
               {biz.status || 'Pending'}
             </Text>
           </View>
         </View>
+
+        {/* Gallery Images if available */}
+        {biz.images && biz.images.length > 1 && (
+          <View style={styles.gallerySection}>
+            <Text style={styles.sectionSubtitle}>Business Gallery ({biz.images.length})</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.galleryScroll}>
+              {biz.images.map((img, idx) => {
+                const fullImgUrl = img.imageUrl.startsWith('http')
+                  ? img.imageUrl
+                  : `https://demo.scriptindia.in:8054${img.imageUrl}`;
+                return (
+                  <Image
+                    key={img.businessImageId || idx}
+                    source={{ uri: fullImgUrl }}
+                    style={styles.galleryThumb}
+                    contentFit="cover"
+                  />
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Business Information Details Card */}
         <View style={styles.detailCard}>
@@ -203,13 +253,41 @@ export default function BusinessDetailScreen() {
             <Text style={styles.sectionTitle}>Business Information</Text>
           </View>
 
-          <InfoRow label="Owner Name" value={biz.ownerName} />
+          <InfoRow label="Business ID" value={`#${resolveBusinessId(biz)}`} />
+          <InfoRow label="Owner Name" value={biz.ownerName || 'Business Owner'} />
           <InfoRow label="Mobile Number" value={biz.phoneNumber} />
           <InfoRow label="Email" value={biz.email} />
-          <InfoRow label="Category" value={biz.category} />
+          <InfoRow label="Category" value={categoryName} />
+          <InfoRow label="Address" value={fullAddress} />
           <InfoRow label="Description" value={biz.description} />
-          <InfoRow label="Submitted On" value={formattedDate} />
+          <InfoRow label="Submitted On" value={createdAtText} />
+
+          {approvedAtText && <InfoRow label="Approved On" value={approvedAtText} />}
+          {biz.rejectionReason && (
+            <InfoRow label="Rejection Reason" value={biz.rejectionReason} />
+          )}
         </View>
+
+        {/* Services List Card */}
+        {biz.services && biz.services.length > 0 && (
+          <View style={[styles.detailCard, { marginTop: 16 }]}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionHeaderIcon}>🛠️</Text>
+              <Text style={styles.sectionTitle}>Services Offered ({biz.services.length})</Text>
+            </View>
+
+            <View style={styles.servicesGrid}>
+              {biz.services.map(svc => (
+                <View key={svc.serviceId} style={styles.serviceChip}>
+                  <Text style={styles.serviceChipTitle}>• {svc.serviceName}</Text>
+                  {svc.description ? (
+                    <Text style={styles.serviceChipDesc}>{svc.description}</Text>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       {/* Bottom Sticky Action Bar */}
@@ -244,9 +322,40 @@ export default function BusinessDetailScreen() {
             {actionLoading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.btnActionText}>⏸ Suspend Business</Text>
+              <Text style={styles.btnActionText}>⏸ Suspend</Text>
             )}
           </Pressable>
+
+          <Pressable
+            style={[styles.btnAction, styles.btnReject]}
+            onPress={handleReject}
+            disabled={actionLoading}>
+            <Text style={styles.btnActionText}>✕ Reject</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {(isSuspended || isRejected) && (
+        <View style={styles.actionBar}>
+          <Pressable
+            style={[styles.btnAction, styles.btnApprove]}
+            onPress={handleApprove}
+            disabled={actionLoading}>
+            {actionLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.btnActionText}>✓ Re-Approve</Text>
+            )}
+          </Pressable>
+
+          {isSuspended && (
+            <Pressable
+              style={[styles.btnAction, styles.btnReject]}
+              onPress={handleReject}
+              disabled={actionLoading}>
+              <Text style={styles.btnActionText}>✕ Reject</Text>
+            </Pressable>
+          )}
         </View>
       )}
     </SafeAreaView>
@@ -311,6 +420,27 @@ const styles = StyleSheet.create({
   heroSub: { fontSize: 13, color: SECONDARY, marginTop: 2 },
   heroLocation: { fontSize: 12, color: SECONDARY, marginTop: 4 },
 
+  /* Gallery Section */
+  gallerySection: {
+    marginBottom: 16,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: SECONDARY,
+    marginBottom: 8,
+  },
+  galleryScroll: {
+    flexDirection: 'row',
+  },
+  galleryThumb: {
+    width: 90,
+    height: 90,
+    borderRadius: 12,
+    marginRight: 10,
+    backgroundColor: '#F3F4F6',
+  },
+
   /* Status Badge */
   statusBadge: {
     flexDirection: 'row',
@@ -325,10 +455,12 @@ const styles = StyleSheet.create({
   },
   statusBadgeApproved: { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' },
   statusBadgeRejected: { backgroundColor: '#FEF2F2', borderColor: '#FECACA' },
+  statusBadgeSuspended: { backgroundColor: '#F3F4F6', borderColor: '#D1D5DB' },
   statusBadgeIcon: { fontSize: 10 },
   statusBadgeText: { fontSize: 11, fontWeight: '700', color: '#EA580C' },
   statusBadgeTextApproved: { color: '#16A34A' },
   statusBadgeTextRejected: { color: '#DC2626' },
+  statusBadgeTextSuspended: { color: '#6B7280' },
 
   /* Detail Card */
   detailCard: {
@@ -359,6 +491,28 @@ const styles = StyleSheet.create({
   },
   infoLabel: { fontSize: 13, color: SECONDARY, fontWeight: '500' },
   infoValue: { fontSize: 14, fontWeight: '600', color: TEXT, marginTop: 4, lineHeight: 20 },
+
+  /* Services Grid */
+  servicesGrid: {
+    gap: 8,
+  },
+  serviceChip: {
+    backgroundColor: '#FAFAFA',
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 12,
+    padding: 10,
+  },
+  serviceChipTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: TEXT,
+  },
+  serviceChipDesc: {
+    fontSize: 12,
+    color: SECONDARY,
+    marginTop: 2,
+  },
 
   /* Action Bar */
   actionBar: {

@@ -6,6 +6,7 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -13,7 +14,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { getPendingBusinesses, type Business, type BusinessStatus } from '@/services/admin';
+import {
+  getAllBusinessesAdmin,
+  resolveBusinessCategoryName,
+  resolveBusinessId,
+  resolveBusinessImageUrl,
+  type Business,
+  type BusinessStatus,
+} from '@/services/admin';
 
 const ORANGE = '#E85D04';
 const TEXT = '#111827';
@@ -34,7 +42,7 @@ export default function ApprovalsScreen() {
 
   const load = async () => {
     try {
-      const res = await getPendingBusinesses();
+      const res = await getAllBusinessesAdmin();
       setAllData(res.data ?? []);
     } catch {}
     finally {
@@ -57,7 +65,8 @@ export default function ApprovalsScreen() {
     const matchSearch =
       !search ||
       b.businessName?.toLowerCase().includes(search.toLowerCase()) ||
-      b.city?.toLowerCase().includes(search.toLowerCase());
+      b.city?.toLowerCase().includes(search.toLowerCase()) ||
+      b.address?.toLowerCase().includes(search.toLowerCase());
     return matchTab && matchSearch;
   });
 
@@ -77,11 +86,15 @@ export default function ApprovalsScreen() {
   };
 
   const renderItem = ({ item }: { item: Business }) => {
+    const bizId = resolveBusinessId(item);
+    const imageUrl = resolveBusinessImageUrl(item);
+    const categoryName = resolveBusinessCategoryName(item);
+
     const isApproved = item.status === 'Approved';
     const isRejected = item.status === 'Rejected';
-    const locationText = [item.city, item.state].filter(Boolean).join(', ') || 'N/A';
-    const dateText = item.submittedOn
-      ? new Date(item.submittedOn).toLocaleDateString('en-IN', {
+    const locationText = [item.address, item.city, item.state].filter(Boolean).join(', ') || 'N/A';
+    const dateText = item.createdAt || item.submittedOn
+      ? new Date(item.createdAt || item.submittedOn!).toLocaleDateString('en-IN', {
           day: '2-digit',
           month: 'short',
           year: 'numeric',
@@ -92,10 +105,10 @@ export default function ApprovalsScreen() {
       <Pressable
         style={styles.card}
         onPress={() =>
-          router.push({ pathname: '/admin/business-detail', params: { id: item.id } })
+          router.push({ pathname: '/admin/business-detail', params: { id: bizId } })
         }>
-        {item.imageUrl ? (
-          <Image source={{ uri: item.imageUrl }} style={styles.bizImage} contentFit="cover" />
+        {imageUrl ? (
+          <Image source={{ uri: imageUrl }} style={styles.bizImage} contentFit="cover" />
         ) : (
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
@@ -109,9 +122,9 @@ export default function ApprovalsScreen() {
             {item.businessName || 'Business Name'}
           </Text>
           <Text style={styles.bizSub} numberOfLines={1}>
-            {item.category || 'General Service'}
+            {categoryName}
           </Text>
-          <Text style={styles.bizMeta}>📍 {locationText}</Text>
+          <Text style={styles.bizMeta} numberOfLines={1}>📍 {locationText}</Text>
           <Text style={styles.bizMetaDate}>📅 {dateText}</Text>
         </View>
 
@@ -148,8 +161,12 @@ export default function ApprovalsScreen() {
         <View style={{ width: 32 }} />
       </View>
 
-      {/* Tabs Row */}
-      <View style={styles.tabsContainer}>
+      {/* Tabs Row (Horizontally Movable) */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabsScroll}
+        contentContainerStyle={styles.tabsContainer}>
         {(['Pending', 'Approved', 'Rejected', 'All'] as TabOption[]).map(tab => {
           const isActive = activeTab === tab;
           const count = getTabCount(tab);
@@ -181,7 +198,7 @@ export default function ApprovalsScreen() {
             </Pressable>
           );
         })}
-      </View>
+      </ScrollView>
 
       {/* Search Input Bar */}
       <View style={styles.searchSection}>
@@ -205,7 +222,7 @@ export default function ApprovalsScreen() {
       ) : (
         <FlatList
           data={filtered}
-          keyExtractor={i => String(i.id)}
+          keyExtractor={i => String(resolveBusinessId(i))}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
@@ -248,13 +265,16 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 17, fontWeight: '700', color: TEXT, letterSpacing: -0.3 },
 
   /* Tabs */
-  tabsContainer: {
-    flexDirection: 'row',
+  tabsScroll: {
     backgroundColor: CARD,
-    paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: BORDER,
-    justifyContent: 'space-between',
+    flexGrow: 0,
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    gap: 16,
   },
   tabItem: {
     paddingVertical: 12,
