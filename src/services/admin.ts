@@ -132,7 +132,7 @@ export async function createCategory(formData: FormData): Promise<any> {
 }
 
 export async function updateCategory(id: number, formData: FormData): Promise<any> {
-  const res = await api.put(`/categories/${id}`, formData, {
+  const res = await api.patch(`/categories/${id}`, formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
   return res.data;

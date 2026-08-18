@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
 // ── Base URL ──────────────────────────────────────────────
-export const BASE_URL = 'https://demo.scriptindia.in:8054/api';
+export const BASE_URL = 'https://api.connectguru.in/api/';
 
 const api = axios.create({
   baseURL: BASE_URL,

@@ -114,9 +114,14 @@ export default function ProfileScreen() {
             onPress={() => Alert.alert('Saved Businesses', 'Your saved bookmarks.')}
           />
           <MenuItem
+            icon="👑"
+            label="Upgrade to Pro / Subscription Plans"
+            onPress={() => router.push('/plans')}
+          />
+          <MenuItem
             icon="💳"
-            label="Payment History"
-            onPress={() => Alert.alert('Payment History', 'No past transactions.')}
+            label="My Subscription & Billing"
+            onPress={() => router.push('/plans/my-subscription')}
           />
           <MenuItem
             icon="⚙️"

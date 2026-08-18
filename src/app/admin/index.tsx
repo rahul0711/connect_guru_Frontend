@@ -271,6 +271,14 @@ export default function AdminDashboard() {
             bgColor="#F3E8FF"
             onPress={() => router.push('/admin/categories')}
           />
+          <StatCard
+            icon="💳"
+            value={2}
+            label="Subscription Plans"
+            color="#059669"
+            bgColor="#D1FAE5"
+            onPress={() => router.push('/admin/plans')}
+          />
         </View>
 
         {/* ── Quick Action Pills Bar (Movable / Horizontally Scrollable) ── */}
@@ -288,6 +296,11 @@ export default function AdminDashboard() {
             style={styles.quickPill}
             onPress={() => router.push('/admin/categories')}>
             <Text style={styles.quickPillText}>📂 Manage Categories</Text>
+          </Pressable>
+          <Pressable
+            style={styles.quickPill}
+            onPress={() => router.push('/admin/plans')}>
+            <Text style={styles.quickPillText}>💳 Subscription Plans</Text>
           </Pressable>
           <Pressable
             style={styles.quickPill}

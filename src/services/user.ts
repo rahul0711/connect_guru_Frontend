@@ -121,7 +121,7 @@ export async function getDemandById(id: number): Promise<DemandSingleResponse> {
 
 /** Update a demand (Endpoint: PUT /Demands/{id}) */
 export async function updateDemand(id: number, payload: UpdateDemandPayload): Promise<DemandSingleResponse> {
-  const res = await api.put<DemandSingleResponse>(`/Demands/${id}`, payload);
+  const res = await api.patch<DemandSingleResponse>(`/Demands/${id}`, payload);
   return res.data;
 }
 
