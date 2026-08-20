@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useBottomSafeHeight } from '@/hooks/useBottomSafeHeight';
+
 import {
   getPublicBusinesses,
   getPublicCategories,
@@ -147,7 +149,7 @@ export default function CategoryDetailScreen() {
       {/* Top Header */}
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backArrow}>‹</Text>
+          <Text style={styles.backArrow}>←</Text>
         </Pressable>
         <Text style={styles.headerTitle} numberOfLines={1}>
           {catTitle}
@@ -211,7 +213,7 @@ export default function CategoryDetailScreen() {
       )}
 
       {/* Sticky Bottom CTA Button to Create Demand */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { paddingBottom: useBottomSafeHeight() + 10 }]}>
         <Pressable
           style={({ pressed }) => [styles.btnDemand, pressed && { opacity: 0.9 }]}
           onPress={handlePostDemand}>
@@ -234,8 +236,21 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: BORDER,
   },
-  backBtn: { padding: 4 },
-  backArrow: { fontSize: 28, fontWeight: '600', color: TEXT },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backArrow: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: TEXT,
+    textAlign: 'center',
+    includeFontPadding: false,
+  },
   headerTitle: { fontSize: 17, fontWeight: '700', color: TEXT, letterSpacing: -0.3, flex: 1, textAlign: 'center', marginHorizontal: 8 },
   headerBtn: { padding: 4 },
   searchIcon: { fontSize: 18 },
@@ -337,7 +352,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 16,
+    paddingTop: 12,
+    paddingHorizontal: 16,
     backgroundColor: CARD,
     borderTopWidth: 1,
     borderTopColor: BORDER,

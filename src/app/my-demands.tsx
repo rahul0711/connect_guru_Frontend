@@ -15,6 +15,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BrandHeader } from '@/components/BrandHeader';
+import { useBottomSafeHeight } from '@/hooks/useBottomSafeHeight';
+
 import {
   acceptDemandResponse,
   getDemandResponsesForUser,
@@ -248,18 +251,25 @@ export default function MyDemandsScreen() {
             </Pressable>
           </View>
 
-          <View
-            style={[
-              styles.statusBadge,
-              isOpen ? styles.statusBadgeActive : styles.statusBadgeClosed,
-            ]}>
-            <Text
+          <View style={{ alignItems: 'flex-end', gap: 6 }}>
+            {/* Business View Count Badge (Above Open) */}
+            <View style={styles.viewsBadge}>
+              <Text style={styles.viewsBadgeText}>👁️ {item.viewCount ?? 0} views</Text>
+            </View>
+
+            <View
               style={[
-                styles.statusBadgeText,
-                isOpen ? styles.statusBadgeTextActive : styles.statusBadgeTextClosed,
+                styles.statusBadge,
+                isOpen ? styles.statusBadgeActive : styles.statusBadgeClosed,
               ]}>
-              {isOpen ? 'Active' : item.status}
-            </Text>
+              <Text
+                style={[
+                  styles.statusBadgeText,
+                  isOpen ? styles.statusBadgeTextActive : styles.statusBadgeTextClosed,
+                ]}>
+                {isOpen ? 'Active' : item.status}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -310,14 +320,8 @@ export default function MyDemandsScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backArrow}>←</Text>
-        </Pressable>
-        <Text style={styles.headerTitle}>My Demands</Text>
-        <View style={{ width: 28 }} />
-      </View>
+      {/* ── Brand Header Logo ── */}
+      <BrandHeader showBackBtn />
 
       {/* Status Tabs */}
       <View style={styles.tabsRow}>
@@ -366,7 +370,7 @@ export default function MyDemandsScreen() {
       )}
 
       {/* Bottom Sticky Orange Button */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { paddingBottom: useBottomSafeHeight() + 12 }]}>
         <Pressable
           style={({ pressed }) => [styles.btnPost, pressed && { opacity: 0.9 }]}
           onPress={() => router.push('/create-demand')}>
@@ -419,7 +423,12 @@ export default function MyDemandsScreen() {
 
             {responsesDemand && (
               <View style={styles.summaryDemandCard}>
-                <Text style={styles.summaryDemandTitle}>{responsesDemand.title}</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={[styles.summaryDemandTitle, { flex: 1, marginRight: 8 }]}>{responsesDemand.title}</Text>
+                  <View style={styles.viewsBadge}>
+                    <Text style={styles.viewsBadgeText}>👁️ {responsesDemand.viewCount ?? 0} views</Text>
+                  </View>
+                </View>
                 <Text style={styles.summaryDemandCategory}>
                   Category: {responsesDemand.category?.categoryName || 'General Service'}
                 </Text>
@@ -541,7 +550,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
 
-  list: { padding: 16, paddingBottom: 90 },
+  list: { padding: 16, paddingBottom: 110 },
 
   card: {
     backgroundColor: CARD,
@@ -570,6 +579,22 @@ const styles = StyleSheet.create({
   statusBadgeText: { fontSize: 11, fontWeight: '700' },
   statusBadgeTextActive: { color: '#10B981' },
   statusBadgeTextClosed: { color: '#6B7280' },
+
+  viewsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  viewsBadgeText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#374151',
+  },
 
   cardActions: {
     flexDirection: 'row',
@@ -625,7 +650,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 16,
+    paddingTop: 12,
+    paddingHorizontal: 16,
     backgroundColor: CARD,
     borderTopWidth: 1,
     borderTopColor: BORDER,

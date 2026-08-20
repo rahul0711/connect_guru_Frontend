@@ -4,15 +4,16 @@ import api from '@/lib/axios';
 
 export type RegisterPayload = {
   fullName: string;
-  email: string;
   phoneNumber: string;
-  password: string;
-  address: string;
-  city: string;
-  state: string;
-  country: string;
-  pincode: string;
-  gender: string;
+  password?: string;
+  email?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  pincode?: string;
   role: 'User' | 'Business';
 };
 
@@ -64,6 +65,79 @@ export type LoginResponse = {
 // ── Login ─────────────────────────────────────────────────────
 export async function loginUser(payload: LoginPayload): Promise<LoginResponse> {
   const response = await api.post<LoginResponse>('/auth/login', payload);
+
+  const d = response.data?.data;
+  if (d?.token) {
+    await AsyncStorage.setItem('auth_token', d.token);
+    await AsyncStorage.setItem(
+      'user_data',
+      JSON.stringify({
+        userId: d.userId,
+        fullName: d.fullName,
+        email: d.email,
+        role: d.role,
+        expiresAt: d.expiresAt,
+      }),
+    );
+  }
+
+  return response.data;
+}
+
+// ────────────────────────────────────────────────────────────────
+// OTP Auth
+// ────────────────────────────────────────────────────────────────
+
+export type SendOtpResponse = {
+  success: boolean;
+  message: string;
+};
+
+/** POST /api/Auth/send-otp */
+export async function sendOtp(mobileNumber: string): Promise<SendOtpResponse> {
+  const response = await api.post<SendOtpResponse>('/Auth/send-otp', { mobileNumber });
+  return response.data;
+}
+
+export type RegisterOtpPayload = {
+  fullName: string;
+  mobileNumber: string;
+  otp: string;
+  gender?: string;
+  dateOfBirth?: string;
+  email?: string;
+};
+
+/** POST /api/Auth/register-otp */
+export async function registerOtp(payload: RegisterOtpPayload): Promise<LoginResponse> {
+  const response = await api.post<LoginResponse>('/Auth/register-otp', payload);
+
+  const d = response.data?.data;
+  if (d?.token) {
+    await AsyncStorage.setItem('auth_token', d.token);
+    await AsyncStorage.setItem(
+      'user_data',
+      JSON.stringify({
+        userId: d.userId,
+        fullName: d.fullName,
+        email: d.email,
+        role: d.role,
+        expiresAt: d.expiresAt,
+      }),
+    );
+  }
+
+  return response.data;
+}
+
+export type LoginOtpPayload = {
+  mobileNumber: string;
+  otp: string;
+};
+
+/** POST /api/Auth/login-otp */
+export async function loginOtp(payload: LoginOtpPayload): Promise<LoginResponse> {
+  const response = await api.post<LoginResponse>('/Auth/login-otp', payload);
 
   const d = response.data?.data;
   if (d?.token) {

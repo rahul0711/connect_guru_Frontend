@@ -16,6 +16,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BrandHeader } from '@/components/BrandHeader';
+import { useBottomSafeHeight } from '@/hooks/useBottomSafeHeight';
 import {
   getMyDemands,
   getPublicBusinesses,
@@ -52,6 +54,7 @@ export default function UserHomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userName, setUserName] = useState('');
+  const [userRole, setUserRole] = useState('');
   const [locationName, setLocationName] = useState('Vapi, Gujarat');
 
   const loadData = async () => {
@@ -61,6 +64,7 @@ export default function UserHomeScreen() {
         try {
           const parsed = JSON.parse(storedUserData);
           setUserName(parsed.fullName || parsed.email || '');
+          if (parsed.role) setUserRole(parsed.role);
         } catch {}
       }
 
@@ -122,23 +126,16 @@ export default function UserHomeScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      {/* ── Top Location & Notification Bar ── */}
-      <View style={styles.topBar}>
-        <Pressable style={styles.locationSelector}>
-          <Text style={styles.locationPinIcon}>📍</Text>
-          <Text style={styles.locationText}>{locationName}</Text>
-          <Text style={styles.locationDropdownArrow}>▾</Text>
-        </Pressable>
-
-        <View style={styles.topRightActions}>
-          <Pressable style={styles.bellButton} onPress={handleLogout}>
-            <Text style={styles.bellIcon}>🔔</Text>
-            <View style={styles.badgeDot}>
-              <Text style={styles.badgeDotText}>2</Text>
-            </View>
+      {/* ── Instagram-Style Top Brand Header Bar ── */}
+      <BrandHeader
+        rightAction={
+          <Pressable style={styles.locationSelector}>
+            <Text style={styles.locationPinIcon}>📍</Text>
+            <Text style={styles.locationText}>{locationName}</Text>
+            <Text style={styles.locationDropdownArrow}>▾</Text>
           </Pressable>
-        </View>
-      </View>
+        }
+      />
 
       {/* ── Search Input Bar ── */}
       <View style={styles.searchSection}>
@@ -333,8 +330,13 @@ export default function UserHomeScreen() {
                         <Text style={styles.feedUserLocation}>{locationName}  •  {createdDate}</Text>
                       </View>
 
-                      <View style={styles.lookingForBadge}>
-                        <Text style={styles.lookingForText}>{item.status || 'Looking for'}</Text>
+                      <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                        <View style={styles.viewsBadge}>
+                          <Text style={styles.viewsBadgeText}>👁️ {item.viewCount ?? 0} views</Text>
+                        </View>
+                        <View style={styles.lookingForBadge}>
+                          <Text style={styles.lookingForText}>{item.status || 'Open'}</Text>
+                        </View>
                       </View>
                     </View>
 
@@ -396,8 +398,13 @@ export default function UserHomeScreen() {
                       <Text style={styles.feedUserLocation}>{locationName}  •  {createdDate}</Text>
                     </View>
 
-                    <View style={styles.lookingForBadge}>
-                      <Text style={styles.lookingForText}>{item.status || 'Looking for'}</Text>
+                    <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                      <View style={styles.viewsBadge}>
+                        <Text style={styles.viewsBadgeText}>👁️ {item.viewCount ?? 0} views</Text>
+                      </View>
+                      <View style={styles.lookingForBadge}>
+                        <Text style={styles.lookingForText}>{item.status || 'Open'}</Text>
+                      </View>
                     </View>
                   </View>
 
@@ -472,7 +479,7 @@ export default function UserHomeScreen() {
       </ScrollView>
 
       {/* ── Bottom Navigation Tab Bar ── */}
-      <View style={styles.bottomTabBar}>
+      <View style={[styles.bottomTabBar, { paddingBottom: useBottomSafeHeight() }]}>
         <Pressable style={styles.tabBarItem}>
           <Text style={[styles.tabBarIcon, { color: ORANGE }]}>🏠</Text>
           <Text style={[styles.tabBarLabel, { color: ORANGE, fontWeight: '700' }]}>Home</Text>
@@ -483,12 +490,15 @@ export default function UserHomeScreen() {
           <Text style={styles.tabBarLabel}>Categories</Text>
         </Pressable>
 
-        {/* Center Floating Post Button */}
-        <Pressable style={styles.centerPostButton} onPress={() => router.push('/create-demand')}>
-          <Text style={styles.centerPostIcon}>+</Text>
+        {/* Center Tab Button */}
+        <Pressable
+          style={styles.tabBarItem}
+          onPress={() => router.push(userRole === 'Business' ? '/business' : '/create-demand')}>
+          <Text style={styles.tabBarIcon}>{userRole === 'Business' ? '🏢' : '➕'}</Text>
+          <Text style={styles.tabBarLabel}>{userRole === 'Business' ? 'Business' : 'Post'}</Text>
         </Pressable>
 
-        <Pressable style={styles.tabBarItem} onPress={() => router.push('/home')}>
+        <Pressable style={styles.tabBarItem} onPress={() => router.push('/search')}>
           <Text style={styles.tabBarIcon}>🔍</Text>
           <Text style={styles.tabBarLabel}>Search</Text>
         </Pressable>
@@ -506,7 +516,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: BG },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: BG },
   scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 80 },
+  scrollContent: { paddingBottom: 100 },
 
   /* Top Bar */
   topBar: {
@@ -525,7 +535,16 @@ const styles = StyleSheet.create({
   locationPinIcon: { fontSize: 16, color: ORANGE },
   locationText: { fontSize: 15, fontWeight: '700', color: TEXT },
   locationDropdownArrow: { fontSize: 14, color: SECONDARY },
-  topRightActions: { flexDirection: 'row', alignItems: 'center' },
+  topRightActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  topPostDemandBtn: {
+    backgroundColor: '#FFF7ED',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+  },
+  topPostDemandBtnText: { color: ORANGE, fontSize: 12, fontWeight: '700' },
   bellButton: { position: 'relative', padding: 4 },
   bellIcon: { fontSize: 20 },
   badgeDot: {
@@ -698,6 +717,21 @@ const styles = StyleSheet.create({
     borderColor: '#A7F3D0',
   },
   lookingForText: { fontSize: 11, fontWeight: '700', color: '#10B981' },
+  viewsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  viewsBadgeText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#374151',
+  },
   postTitle: { fontSize: 15, fontWeight: '700', color: TEXT, marginBottom: 6 },
   postBody: { fontSize: 13, color: SECONDARY, lineHeight: 18, marginBottom: 12 },
   tagChip: {
@@ -773,7 +807,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 64,
+    minHeight: 64,
     backgroundColor: CARD,
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -781,6 +815,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: BORDER,
     paddingHorizontal: 10,
+    paddingTop: 8,
   },
   tabBarItem: { alignItems: 'center', justifyContent: 'center' },
   tabBarIcon: { fontSize: 20, color: SECONDARY },

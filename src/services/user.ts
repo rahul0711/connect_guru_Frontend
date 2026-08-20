@@ -40,6 +40,8 @@ export type Demand = {
   userName?: string;
   userCity?: string;
   inquiriesCount?: number;
+  detailsLocked?: boolean;
+  viewCount?: number;
 };
 
 export type CreateDemandPayload = {
@@ -143,4 +145,47 @@ export async function getOpenDemands(): Promise<DemandListResponse> {
   return res.data;
 }
 
+// ─────────────────────────────────────────────────────────────
+// USER PROFILE TYPES & APIs
+// ─────────────────────────────────────────────────────────────
+export type UserProfile = {
+  userId?: number;
+  id?: number;
+  fullName?: string;
+  name?: string;
+  email?: string;
+  phoneNumber?: string;
+  mobileNumber?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  role?: string;
+};
+
+export type UpdateUserProfilePayload = {
+  fullName?: string;
+  phoneNumber?: string;
+  mobileNumber?: string;
+  email?: string;
+  dateOfBirth?: string;
+};
+
+export type UserProfileResponse = {
+  success: boolean;
+  message?: string;
+  data?: UserProfile;
+};
+
+/** Get user profile (Endpoint: GET /User/profile) */
+export async function getUserProfile(): Promise<UserProfileResponse> {
+  const res = await api.get<UserProfileResponse>('/User/profile');
+  return res.data;
+}
+
+/** Update user profile (Endpoint: PATCH /api/User/profile) - fullName, phoneNumber, email, dateOfBirth */
+export async function updateUserProfile(payload: UpdateUserProfilePayload): Promise<UserProfileResponse> {
+  const res = await api.patch<UserProfileResponse>('/User/profile', payload);
+  return res.data;
+}
+
 export { resolveBusinessImageUrl, resolveBusinessCategoryName, resolveBusinessId };
+

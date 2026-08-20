@@ -33,36 +33,46 @@ export default function RegisterScreen() {
 
   // ── Form state ────────────────────────────────────────
   const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [gender, setGender] = useState<Gender>('Male');
+  const [email, setEmail] = useState('');
+
+  // Business extra fields
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [country, setCountry] = useState('India');
   const [pincode, setPincode] = useState('');
-  const [gender, setGender] = useState<Gender>('Male');
+
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   // ── Submit ────────────────────────────────────────────
   const handleSignUp = async () => {
-    if (!fullName || !email || !phoneNumber || !password) {
-      Alert.alert('Missing Fields', 'Please fill in all required fields.');
+    if (!fullName.trim() || !phoneNumber.trim() || !password) {
+      Alert.alert('Missing Fields', 'Please enter your Full Name, Mobile Number, and Password.');
+      return;
+    }
+
+    if (role === 'User' && !dateOfBirth.trim()) {
+      Alert.alert('Missing Fields', 'Please enter your Date of Birth.');
       return;
     }
 
     const payload: RegisterPayload = {
-      fullName,
-      email,
-      phoneNumber,
+      fullName: fullName.trim(),
+      phoneNumber: phoneNumber.trim(),
       password,
-      address,
-      city,
-      state,
-      country,
-      pincode,
+      dateOfBirth: dateOfBirth.trim() || undefined,
       gender,
+      email: email.trim() || undefined,
+      address: address.trim() || undefined,
+      city: city.trim() || undefined,
+      state: state.trim() || undefined,
+      country: country.trim() || undefined,
+      pincode: pincode.trim() || undefined,
       role,
     };
 
@@ -106,14 +116,14 @@ export default function RegisterScreen() {
               style={[styles.roleBtn, role === 'User' && styles.roleBtnActive]}
               onPress={() => setRole('User')}>
               <Text style={[styles.roleBtnText, role === 'User' && styles.roleBtnTextActive]}>
-                👤  User
+                👤 User
               </Text>
             </Pressable>
             <Pressable
               style={[styles.roleBtn, role === 'Business' && styles.roleBtnActive]}
               onPress={() => setRole('Business')}>
               <Text style={[styles.roleBtnText, role === 'Business' && styles.roleBtnTextActive]}>
-                🏢  Business
+                🏢 Business
               </Text>
             </Pressable>
           </View>
@@ -121,7 +131,7 @@ export default function RegisterScreen() {
           {/* ── Form Fields ── */}
           <View style={styles.form}>
 
-            {/* Full Name */}
+            {/* 1. Full Name */}
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>Full Name <Text style={styles.req}>*</Text></Text>
               <View style={styles.inputRow}>
@@ -137,7 +147,7 @@ export default function RegisterScreen() {
               </View>
             </View>
 
-            {/* Mobile Number */}
+            {/* 2. Mobile Number */}
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>Mobile Number <Text style={styles.req}>*</Text></Text>
               <View style={styles.inputRow}>
@@ -154,24 +164,7 @@ export default function RegisterScreen() {
               </View>
             </View>
 
-            {/* Email */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Email Address <Text style={styles.req}>*</Text></Text>
-              <View style={styles.inputRow}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="rahul@example.com"
-                  placeholderTextColor={PLACEHOLDER}
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-                <Text style={styles.icon}>✉️</Text>
-              </View>
-            </View>
-
-            {/* Password */}
+            {/* 3. Password */}
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>Password <Text style={styles.req}>*</Text></Text>
               <View style={styles.inputRow}>
@@ -190,9 +183,25 @@ export default function RegisterScreen() {
               </View>
             </View>
 
-            {/* Gender */}
+            {/* 4. Date of Birth (Required for User) */}
             <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Gender</Text>
+              <Text style={styles.label}>Date of Birth (DOB) <Text style={styles.req}>*</Text></Text>
+              <View style={styles.inputRow}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="YYYY-MM-DD (e.g. 2000-01-15)"
+                  placeholderTextColor={PLACEHOLDER}
+                  value={dateOfBirth}
+                  onChangeText={setDateOfBirth}
+                  keyboardType="numbers-and-punctuation"
+                />
+                <Text style={styles.icon}>📅</Text>
+              </View>
+            </View>
+
+            {/* 5. Gender */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>Gender <Text style={styles.req}>*</Text></Text>
               <View style={styles.genderRow}>
                 {(['Male', 'Female', 'Other'] as Gender[]).map((g) => (
                   <Pressable
@@ -208,70 +217,67 @@ export default function RegisterScreen() {
               </View>
             </View>
 
-            {/* Address */}
+            {/* 6. Email Address (Optional) */}
             <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Address</Text>
+              <Text style={styles.label}>
+                Email Address <Text style={{ color: SECONDARY, fontWeight: '400' }}>(Optional)</Text>
+              </Text>
               <View style={styles.inputRow}>
                 <TextInput
                   style={styles.input}
-                  placeholder="12 Park Street"
+                  placeholder="rahul@example.com (Optional)"
                   placeholderTextColor={PLACEHOLDER}
-                  value={address}
-                  onChangeText={setAddress}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
                 />
-                <Text style={styles.icon}>🏠</Text>
+                <Text style={styles.icon}>✉️</Text>
               </View>
             </View>
 
-            {/* City & State — side by side */}
-            <View style={styles.rowTwo}>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.label}>City</Text>
-                <TextInput
-                  style={styles.inputPlain}
-                  placeholder="Mumbai"
-                  placeholderTextColor={PLACEHOLDER}
-                  value={city}
-                  onChangeText={setCity}
-                />
-              </View>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.label}>State</Text>
-                <TextInput
-                  style={styles.inputPlain}
-                  placeholder="Maharashtra"
-                  placeholderTextColor={PLACEHOLDER}
-                  value={state}
-                  onChangeText={setState}
-                />
-              </View>
-            </View>
+            {/* Extra Business Fields if Business role selected */}
+            {role === 'Business' && (
+              <>
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.label}>Business Address</Text>
+                  <View style={styles.inputRow}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="12 Park Street"
+                      placeholderTextColor={PLACEHOLDER}
+                      value={address}
+                      onChangeText={setAddress}
+                    />
+                    <Text style={styles.icon}>🏠</Text>
+                  </View>
+                </View>
 
-            {/* Country & Pincode — side by side */}
-            <View style={styles.rowTwo}>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Country</Text>
-                <TextInput
-                  style={styles.inputPlain}
-                  placeholder="India"
-                  placeholderTextColor={PLACEHOLDER}
-                  value={country}
-                  onChangeText={setCountry}
-                />
-              </View>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Pincode</Text>
-                <TextInput
-                  style={styles.inputPlain}
-                  placeholder="400001"
-                  placeholderTextColor={PLACEHOLDER}
-                  value={pincode}
-                  onChangeText={setPincode}
-                  keyboardType="numeric"
-                  maxLength={6}
-                />
-              </View>
-            </View>
+                <View style={styles.rowTwo}>
+                  <View style={[styles.fieldGroup, { flex: 1 }]}>
+                    <Text style={styles.label}>City</Text>
+                    <TextInput
+                      style={styles.inputPlain}
+                      placeholder="Mumbai"
+                      placeholderTextColor={PLACEHOLDER}
+                      value={city}
+                      onChangeText={setCity}
+                    />
+                  </View>
+                  <View style={[styles.fieldGroup, { flex: 1 }]}>
+                    <Text style={styles.label}>State</Text>
+                    <TextInput
+                      style={styles.inputPlain}
+                      placeholder="Maharashtra"
+                      placeholderTextColor={PLACEHOLDER}
+                      value={state}
+                      onChangeText={setState}
+                    />
+                  </View>
+                </View>
+              </>
+            )}
+
           </View>
 
           {/* ── Sign Up Button ── */}
@@ -291,6 +297,28 @@ export default function RegisterScreen() {
             {' '}and{' '}
             <Text style={styles.legalLink}>Privacy Policy</Text>
           </Text>
+
+          {/* ── OTP Alternative ── */}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <Pressable
+            style={({ pressed }) => [styles.btnOtp, pressed && { opacity: 0.8 }]}
+            onPress={() => router.push('/register-otp')}>
+            <Text style={styles.otpIcon}>📱</Text>
+            <Text style={styles.btnOtpText}>Quick Register with Mobile OTP</Text>
+          </Pressable>
+
+          <View style={styles.footerRow}>
+            <Text style={styles.footerText}>Already have an account? </Text>
+            <Pressable onPress={() => router.push('/login')}>
+              <Text style={styles.footerLink}>Login</Text>
+            </Pressable>
+          </View>
+
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -301,15 +329,12 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#fff' },
   scroll: { paddingHorizontal: 24, paddingBottom: 40 },
 
-  /* Back */
   backBtn: { marginTop: 8, marginBottom: 4, alignSelf: 'flex-start', padding: 4 },
   backArrow: { fontSize: 22, color: TEXT },
 
-  /* Header */
   title: { fontSize: 22, fontWeight: '700', color: TEXT, textAlign: 'center', marginTop: 4 },
   subtitle: { fontSize: 13, color: SECONDARY, textAlign: 'center', marginTop: 2, marginBottom: 20 },
 
-  /* Role Toggle */
   roleToggle: {
     flexDirection: 'row',
     backgroundColor: '#f3f4f6',
@@ -334,7 +359,6 @@ const styles = StyleSheet.create({
   roleBtnText: { fontSize: 14, fontWeight: '600', color: SECONDARY },
   roleBtnTextActive: { color: '#fff' },
 
-  /* Form */
   form: { gap: 14 },
   fieldGroup: { gap: 5 },
   label: { fontSize: 13, fontWeight: '600', color: TEXT },
@@ -369,7 +393,6 @@ const styles = StyleSheet.create({
 
   rowTwo: { flexDirection: 'row', gap: 12 },
 
-  /* Gender */
   genderRow: { flexDirection: 'row', gap: 20, marginTop: 4 },
   radioWrapper: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   radioOuter: {
@@ -385,7 +408,6 @@ const styles = StyleSheet.create({
   radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: ORANGE },
   radioLabel: { fontSize: 13, color: TEXT },
 
-  /* Sign Up */
   btnSignUp: {
     backgroundColor: ORANGE,
     borderRadius: 50,
@@ -400,7 +422,21 @@ const styles = StyleSheet.create({
   },
   btnSignUpText: { color: '#fff', fontSize: 17, fontWeight: '700', letterSpacing: 0.3 },
 
-  /* Legal */
   legal: { fontSize: 11.5, color: SECONDARY, textAlign: 'center', marginTop: 14, lineHeight: 18 },
   legalLink: { color: ORANGE, fontWeight: '600' },
+
+  dividerRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 20, gap: 10 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: BORDER },
+  dividerText: { fontSize: 13, color: SECONDARY, fontWeight: '500' },
+  btnOtp: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    borderRadius: 50, borderWidth: 1.5, borderColor: BORDER,
+    paddingVertical: 14, gap: 10, backgroundColor: '#FFF',
+  },
+  otpIcon: { fontSize: 18 },
+  btnOtpText: { fontSize: 14, fontWeight: '600', color: TEXT },
+
+  footerRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 20 },
+  footerText: { fontSize: 13, color: SECONDARY },
+  footerLink: { fontSize: 13, color: ORANGE, fontWeight: '700' },
 });

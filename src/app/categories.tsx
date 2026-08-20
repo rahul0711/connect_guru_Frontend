@@ -14,6 +14,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BrandHeader } from '@/components/BrandHeader';
+import { useBottomSafeHeight } from '@/hooks/useBottomSafeHeight';
+
 import {
   getPublicBusinesses,
   getPublicCategories,
@@ -43,11 +46,20 @@ export default function AllCategoriesScreen() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [bizCounts, setBizCounts] = useState<Record<number, number>>({});
   const [search, setSearch] = useState('');
+  const [userRole, setUserRole] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = async () => {
     try {
+      const storedUserData = await AsyncStorage.getItem('user_data');
+      if (storedUserData) {
+        try {
+          const parsed = JSON.parse(storedUserData);
+          if (parsed.role) setUserRole(parsed.role);
+        } catch {}
+      }
+
       const [catRes, bizRes] = await Promise.allSettled([
         getPublicCategories(),
         getPublicBusinesses(),
@@ -151,18 +163,8 @@ export default function AllCategoriesScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.headerBtn}>
-          <Text style={styles.backIcon}>‹</Text>
-        </Pressable>
-
-        <Text style={styles.headerTitle}>All Categories</Text>
-
-        <Pressable style={styles.headerBtn}>
-          <Text style={styles.searchIcon}>🔍</Text>
-        </Pressable>
-      </View>
+      {/* ── Brand Header Logo ── */}
+      <BrandHeader />
 
       {/* Search Bar */}
       <View style={styles.searchBarContainer}>
@@ -208,7 +210,7 @@ export default function AllCategoriesScreen() {
       )}
 
       {/* ── Bottom Navigation Tab Bar ── */}
-      <View style={styles.bottomTabBar}>
+      <View style={[styles.bottomTabBar, { paddingBottom: useBottomSafeHeight() }]}>
         <Pressable style={styles.tabBarItem} onPress={() => router.push('/home')}>
           <Text style={styles.tabBarIcon}>🏠</Text>
           <Text style={styles.tabBarLabel}>Home</Text>
@@ -219,12 +221,15 @@ export default function AllCategoriesScreen() {
           <Text style={[styles.tabBarLabel, { color: ORANGE, fontWeight: '700' }]}>Categories</Text>
         </Pressable>
 
-        {/* Center Floating Post Button */}
-        <Pressable style={styles.centerPostButton} onPress={() => router.push('/create-demand')}>
-          <Text style={styles.centerPostIcon}>+</Text>
+        {/* Center Tab Button */}
+        <Pressable
+          style={styles.tabBarItem}
+          onPress={() => router.push(userRole === 'Business' ? '/business' : '/create-demand')}>
+          <Text style={styles.tabBarIcon}>{userRole === 'Business' ? '🏢' : '➕'}</Text>
+          <Text style={styles.tabBarLabel}>{userRole === 'Business' ? 'Business' : 'Post'}</Text>
         </Pressable>
 
-        <Pressable style={styles.tabBarItem} onPress={() => router.push('/home')}>
+        <Pressable style={styles.tabBarItem} onPress={() => router.push('/search')}>
           <Text style={styles.tabBarIcon}>🔍</Text>
           <Text style={styles.tabBarLabel}>Search</Text>
         </Pressable>
@@ -325,7 +330,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 64,
+    minHeight: 64,
     backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -333,6 +338,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: BORDER,
     paddingHorizontal: 10,
+    paddingTop: 8,
   },
   tabBarItem: { alignItems: 'center', justifyContent: 'center' },
   tabBarIcon: { fontSize: 20, color: SECONDARY },

@@ -29,7 +29,8 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('[API Error]', error?.response?.data ?? error.message);
+    // Use console.warn to prevent Expo RedBox overlay popup during handled API errors
+    console.warn('[API Error]', error?.response?.data ?? error.message);
     return Promise.reject(error);
   },
 );

@@ -26,7 +26,10 @@ const BORDER = '#E5E7EB';
 
 export default function CreateDemandScreen() {
   const router = useRouter();
-  const { categoryId: paramCatId } = useLocalSearchParams<{ categoryId?: string }>();
+  const { categoryId: paramCatId, prefillCategoryId } = useLocalSearchParams<{
+    categoryId?: string;
+    prefillCategoryId?: string;
+  }>();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
@@ -37,13 +40,15 @@ export default function CreateDemandScreen() {
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
 
+  const resolvedCatId = prefillCategoryId || paramCatId;
+
   useEffect(() => {
     getPublicCategories()
       .then(res => {
         const active = (res.data ?? []).filter(c => c.isActive !== false);
         setCategories(active);
-        if (paramCatId) {
-          const match = active.find(c => String(resolveCategoryId(c)) === String(paramCatId));
+        if (resolvedCatId) {
+          const match = active.find(c => String(resolveCategoryId(c)) === String(resolvedCatId));
           if (match) {
             setSelectedCategory(match);
             return;
@@ -52,7 +57,7 @@ export default function CreateDemandScreen() {
         if (active.length > 0) setSelectedCategory(active[0]);
       })
       .catch(() => {});
-  }, [paramCatId]);
+  }, [resolvedCatId]);
 
   const handleSubmit = async () => {
     if (!selectedCategory) {
