@@ -1,5 +1,6 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 const ORANGE = '#E85D04';
 const TEXT = '#111827';
@@ -21,7 +22,12 @@ export function BrandHeader({ showPostBtn = false, showBackBtn = false, rightAct
             <Text style={styles.backIcon}>←</Text>
           </Pressable>
         )}
-        <Pressable onPress={() => router.push('/home')}>
+        <Pressable onPress={() => router.push('/home')} style={styles.logoPressable}>
+          <Image
+            source={require('@/assets/logo/logo.png')}
+            style={styles.logoIcon}
+            contentFit="contain"
+          />
           <Text style={styles.brandText}>
             Connect<Text style={{ color: ORANGE }}>Guru</Text>
           </Text>
@@ -48,14 +54,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 10,
+    paddingTop: 8,
+    paddingBottom: 8,
     backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
   leftContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   backBtn: {
     width: 36,
@@ -72,11 +80,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     includeFontPadding: false,
   },
+  logoPressable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  logoIcon: {
+    width: 38,
+    height: 38,
+  },
   brandText: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '900',
     color: TEXT,
-    letterSpacing: -0.6,
+    letterSpacing: -0.5,
   },
   rightContainer: {
     flexDirection: 'row',
@@ -86,7 +103,7 @@ const styles = StyleSheet.create({
   postBtn: {
     backgroundColor: '#FFF7ED',
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#FED7AA',

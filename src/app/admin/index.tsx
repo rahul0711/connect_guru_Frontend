@@ -68,12 +68,16 @@ function StatCard({
   );
 }
 
+import { BusinessQuickViewModal } from '@/components/BusinessQuickViewModal';
+
 function RecentSubmissionItem({
   item,
   onPress,
+  onLongPress,
 }: {
   item: Business;
   onPress: () => void;
+  onLongPress?: () => void;
 }) {
   const imageUrl = resolveBusinessImageUrl(item);
   const categoryName = resolveBusinessCategoryName(item);
@@ -86,24 +90,66 @@ function RecentSubmissionItem({
       })
     : 'Recently';
 
+  const status = item.status || 'Pending';
+
+  const getStatusConfig = (st: string) => {
+    switch (st.toLowerCase()) {
+      case 'approved':
+        return {
+          bg: '#FFF7ED',
+          border: '#FED7AA',
+          text: '#EA580C',
+          icon: '⏱️',
+        };
+      case 'rejected':
+        return {
+          bg: '#FEF2F2',
+          border: '#FECACA',
+          text: '#DC2626',
+          icon: '✕',
+        };
+      case 'suspended':
+        return {
+          bg: '#F3F4F6',
+          border: '#E5E7EB',
+          text: '#4B5563',
+          icon: '⏸',
+        };
+      case 'pending':
+      default:
+        return {
+          bg: '#FFF7ED',
+          border: '#FED7AA',
+          text: '#EA580C',
+          icon: '⏱️',
+        };
+    }
+  };
+
+  const statusCfg = getStatusConfig(status);
+
   return (
     <Pressable
-      style={({ pressed }) => [styles.bizCard, pressed && { opacity: 0.94 }]}
-      onPress={onPress}>
-      {imageUrl ? (
-        <Image
-          source={{ uri: imageUrl }}
-          style={styles.bizImage}
-          contentFit="cover"
-          transition={200}
-        />
-      ) : (
-        <View style={styles.bizAvatar}>
-          <Text style={styles.bizAvatarText}>
-            {item.businessName?.charAt(0)?.toUpperCase() ?? 'B'}
-          </Text>
-        </View>
-      )}
+      style={({ pressed }) => [styles.bizCard, pressed && styles.bizCardPressed]}
+      onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={1200}>
+      <View style={styles.bizAvatarWrapper}>
+        {imageUrl ? (
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.bizImage}
+            contentFit="cover"
+            transition={200}
+          />
+        ) : (
+          <View style={styles.bizAvatar}>
+            <Text style={styles.bizAvatarText}>
+              {item.businessName?.charAt(0)?.toUpperCase() ?? 'B'}
+            </Text>
+          </View>
+        )}
+      </View>
 
       <View style={styles.bizContent}>
         <Text style={styles.bizName} numberOfLines={1}>
@@ -113,15 +159,25 @@ function RecentSubmissionItem({
           {categoryName}
         </Text>
         <View style={styles.bizMetaRow}>
-          <Text style={styles.bizMetaText} numberOfLines={1}>📍 {locationText}</Text>
+          <View style={styles.metaItem}>
+            <Text style={styles.metaIcon}>📍</Text>
+            <Text style={styles.bizMetaText} numberOfLines={1}>
+              {locationText}
+            </Text>
+          </View>
           <Text style={styles.bizMetaDot}>•</Text>
-          <Text style={styles.bizMetaText}>📅 {dateText}</Text>
+          <View style={styles.metaItemDate}>
+            <Text style={styles.metaIcon}>📅</Text>
+            <Text style={styles.bizMetaText} numberOfLines={1}>
+              {dateText}
+            </Text>
+          </View>
         </View>
       </View>
 
-      <View style={styles.statusBadge}>
-        <Text style={styles.statusIcon}>⏱️</Text>
-        <Text style={styles.statusBadgeText}>{item.status || 'Pending'}</Text>
+      <View style={[styles.statusBadge, { backgroundColor: statusCfg.bg, borderColor: statusCfg.border }]}>
+        <Text style={styles.statusIcon}>{statusCfg.icon}</Text>
+        <Text style={[styles.statusBadgeText, { color: statusCfg.text }]}>{status}</Text>
       </View>
     </Pressable>
   );
@@ -139,6 +195,7 @@ export default function AdminDashboard() {
   const [recentPending, setRecentPending] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [quickViewBiz, setQuickViewBiz] = useState<Business | null>(null);
 
   const loadData = async () => {
     try {
@@ -201,18 +258,35 @@ export default function AdminDashboard() {
     <SafeAreaView style={styles.safe}>
       {/* ── Top Header Navigation Bar ── */}
       <View style={styles.topHeader}>
-        <Pressable style={styles.headerIconButton} onPress={handleLogout}>
+        <Pressable
+          style={styles.headerIconButton}
+          onPress={() => Alert.alert('Admin Menu', 'Quick Actions', [
+            { text: 'Manage Businesses', onPress: () => router.push('/admin/businesses') },
+            { text: 'Manage Categories', onPress: () => router.push('/admin/categories') },
+            { text: 'Subscription Plans', onPress: () => router.push('/admin/plans') },
+            { text: 'Cancel', style: 'cancel' },
+          ])}>
           <Text style={styles.hamburgerIcon}>☰</Text>
         </Pressable>
 
         <Text style={styles.headerTitle}>Admin Dashboard</Text>
 
-        <Pressable style={styles.headerIconButton} onPress={handleLogout}>
-          <View style={styles.bellWrapper}>
-            <Text style={styles.bellIcon}>🔔</Text>
-            <View style={styles.notificationDot} />
-          </View>
-        </Pressable>
+        <View style={styles.headerRightGroup}>
+          <Pressable
+            style={styles.headerIconButton}
+            onPress={() => Alert.alert('Notifications', 'You have no new notifications.')}>
+            <View style={styles.bellWrapper}>
+              <Text style={styles.bellIcon}>🔔</Text>
+              <View style={styles.notificationDot} />
+            </View>
+          </Pressable>
+
+          <Pressable
+            style={styles.logoutIconButton}
+            onPress={handleLogout}>
+            <Text style={styles.logoutIcon}>🚪</Text>
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
@@ -337,11 +411,24 @@ export default function AdminDashboard() {
                     params: { id: resolveBusinessId(item) },
                   })
                 }
+                onLongPress={() => setQuickViewBiz(item)}
               />
             ))
           )}
         </View>
       </ScrollView>
+
+      <BusinessQuickViewModal
+        visible={!!quickViewBiz}
+        business={quickViewBiz}
+        onClose={() => setQuickViewBiz(null)}
+        onViewFullDetails={id =>
+          router.push({
+            pathname: '/admin/business-detail',
+            params: { id },
+          })
+        }
+      />
     </SafeAreaView>
   );
 }
@@ -369,40 +456,68 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: CARD,
     borderBottomWidth: 1,
     borderBottomColor: BORDER,
   },
   headerIconButton: {
-    padding: 6,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   hamburgerIcon: {
-    fontSize: 22,
+    fontSize: 20,
     color: TEXT,
     fontWeight: '600',
+    marginTop: -2,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: TEXT,
     letterSpacing: -0.3,
   },
+  headerRightGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   bellWrapper: {
     position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   bellIcon: {
-    fontSize: 20,
+    fontSize: 17,
   },
   notificationDot: {
     position: 'absolute',
-    top: 0,
-    right: 0,
+    top: -2,
+    right: -2,
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: '#EF4444',
+    borderWidth: 1.5,
+    borderColor: '#F3F4F6',
+  },
+  logoutIconButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutIcon: {
+    fontSize: 16,
   },
 
   /* Stat Cards Grid */
@@ -484,7 +599,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     marginTop: 24,
     marginBottom: 14,
   },
@@ -497,12 +612,14 @@ const styles = StyleSheet.create({
   viewAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 4,
   },
   viewAllText: {
     fontSize: 14,
     fontWeight: '600',
     color: ORANGE,
-    marginRight: 4,
+    marginRight: 3,
   },
   viewAllArrow: {
     fontSize: 16,
@@ -517,88 +634,112 @@ const styles = StyleSheet.create({
   },
   bizCard: {
     backgroundColor: CARD,
-    borderRadius: 18,
-    padding: 12,
+    borderRadius: 20,
+    padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: '#EEF0F4',
     shadowColor: '#000',
     shadowOpacity: 0.04,
-    shadowRadius: 8,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 1.5,
+    elevation: 2,
+  },
+  bizCardPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.995 }],
+  },
+  bizAvatarWrapper: {
+    marginRight: 14,
   },
   bizImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 14,
-    marginRight: 12,
+    width: 62,
+    height: 62,
+    borderRadius: 16,
     backgroundColor: '#F3F4F6',
   },
   bizAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 14,
-    backgroundColor: ORANGE + '15',
+    width: 62,
+    height: 62,
+    borderRadius: 16,
+    backgroundColor: '#FFF3EB',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    borderWidth: 1,
+    borderColor: '#FFE4D6',
   },
   bizAvatarText: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '700',
     color: ORANGE,
   },
   bizContent: {
     flex: 1,
+    marginRight: 10,
+    justifyContent: 'center',
   },
   bizName: {
     fontSize: 15,
     fontWeight: '700',
     color: TEXT,
     letterSpacing: -0.2,
+    lineHeight: 20,
   },
   bizCategory: {
     fontSize: 13,
     fontWeight: '500',
     color: SECONDARY,
     marginTop: 2,
+    marginBottom: 6,
   },
   bizMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 6,
+    flexWrap: 'nowrap',
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+  },
+  metaItemDate: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  metaIcon: {
+    fontSize: 11,
+    marginRight: 3,
   },
   bizMetaText: {
     fontSize: 11,
+    fontWeight: '400',
     color: SECONDARY,
   },
   bizMetaDot: {
     fontSize: 11,
-    color: SECONDARY,
-    marginHorizontal: 4,
+    color: '#9CA3AF',
+    marginHorizontal: 5,
   },
 
   /* Status Badge */
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF7ED',
     borderWidth: 1,
-    borderColor: '#FED7AA',
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: 20,
     gap: 4,
+    alignSelf: 'center',
   },
   statusIcon: {
-    fontSize: 10,
+    fontSize: 11,
   },
   statusBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#EA580C',
   },
 
   /* Empty Box */
@@ -620,3 +761,4 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 });
+

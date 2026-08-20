@@ -23,6 +23,8 @@ import {
   type BusinessStatus,
 } from '@/services/admin';
 
+import { BusinessQuickViewModal } from '@/components/BusinessQuickViewModal';
+
 const ORANGE = '#E85D04';
 const TEXT = '#111827';
 const SECONDARY = '#6B7280';
@@ -39,6 +41,7 @@ export default function ApprovalsScreen() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [quickViewBiz, setQuickViewBiz] = useState<Business | null>(null);
 
   const load = async () => {
     try {
@@ -106,7 +109,9 @@ export default function ApprovalsScreen() {
         style={styles.card}
         onPress={() =>
           router.push({ pathname: '/admin/business-detail', params: { id: bizId } })
-        }>
+        }
+        onLongPress={() => setQuickViewBiz(item)}
+        delayLongPress={1200}>
         {imageUrl ? (
           <Image source={{ uri: imageUrl }} style={styles.bizImage} contentFit="cover" />
         ) : (
@@ -124,8 +129,21 @@ export default function ApprovalsScreen() {
           <Text style={styles.bizSub} numberOfLines={1}>
             {categoryName}
           </Text>
-          <Text style={styles.bizMeta} numberOfLines={1}>📍 {locationText}</Text>
-          <Text style={styles.bizMetaDate}>📅 {dateText}</Text>
+          <View style={styles.bizMetaRow}>
+            <View style={styles.metaItem}>
+              <Text style={styles.metaIcon}>📍</Text>
+              <Text style={styles.bizMetaText} numberOfLines={1}>
+                {locationText}
+              </Text>
+            </View>
+            <Text style={styles.bizMetaDot}>•</Text>
+            <View style={styles.metaItemDate}>
+              <Text style={styles.metaIcon}>📅</Text>
+              <Text style={styles.bizMetaText} numberOfLines={1}>
+                {dateText}
+              </Text>
+            </View>
+          </View>
         </View>
 
         <View
@@ -158,7 +176,7 @@ export default function ApprovalsScreen() {
           <Text style={styles.backText}>‹</Text>
         </Pressable>
         <Text style={styles.headerTitle}>Approvals</Text>
-        <View style={{ width: 32 }} />
+        <View style={{ width: 36 }} />
       </View>
 
       {/* Tabs Row (Horizontally Movable) */}
@@ -213,7 +231,7 @@ export default function ApprovalsScreen() {
           />
         </View>
         <Pressable style={styles.filterButton}>
-          <Text style={styles.filterIcon}>🌪️</Text>
+          <Text style={styles.filterIcon}>🎛️</Text>
         </Pressable>
       </View>
 
@@ -244,6 +262,18 @@ export default function ApprovalsScreen() {
           }
         />
       )}
+
+      <BusinessQuickViewModal
+        visible={!!quickViewBiz}
+        business={quickViewBiz}
+        onClose={() => setQuickViewBiz(null)}
+        onViewFullDetails={id =>
+          router.push({
+            pathname: '/admin/business-detail',
+            params: { id },
+          })
+        }
+      />
     </SafeAreaView>
   );
 }
@@ -255,13 +285,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
     backgroundColor: CARD,
     borderBottomWidth: 1,
     borderBottomColor: BORDER,
   },
-  backBtn: { padding: 4 },
-  backText: { fontSize: 24, fontWeight: '600', color: TEXT },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backText: { fontSize: 22, fontWeight: '600', color: TEXT, marginTop: -2 },
   headerTitle: { fontSize: 17, fontWeight: '700', color: TEXT, letterSpacing: -0.3 },
 
   /* Tabs */
@@ -277,7 +314,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   tabItem: {
-    paddingVertical: 12,
+    paddingVertical: 14,
     alignItems: 'center',
     position: 'relative',
   },
@@ -291,6 +328,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: SECONDARY,
+    lineHeight: 20,
   },
   tabTextActive: {
     color: ORANGE,
@@ -299,10 +337,11 @@ const styles = StyleSheet.create({
   tabBadge: {
     backgroundColor: '#F3F4F6',
     borderRadius: 12,
-    paddingHorizontal: 6,
+    paddingHorizontal: 7,
     paddingVertical: 2,
     minWidth: 20,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   tabBadgeActive: {
     backgroundColor: ORANGE,
@@ -311,6 +350,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: SECONDARY,
+    lineHeight: 14,
   },
   tabBadgeTextActive: {
     color: '#FFFFFF',
@@ -338,23 +378,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: CARD,
-    borderRadius: 14,
+    borderRadius: 16,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: '#EEF0F4',
     height: 46,
+    shadowColor: '#000',
+    shadowOpacity: 0.02,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
   searchIcon: { fontSize: 16, marginRight: 8 },
-  searchInput: { flex: 1, fontSize: 14, color: TEXT },
+  searchInput: { flex: 1, fontSize: 14, color: TEXT, paddingVertical: 0 },
   filterButton: {
     width: 46,
     height: 46,
-    borderRadius: 14,
+    borderRadius: 16,
     backgroundColor: CARD,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: '#EEF0F4',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.02,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
   filterIcon: { fontSize: 16 },
 
@@ -362,41 +412,71 @@ const styles = StyleSheet.create({
   list: { paddingHorizontal: 16, paddingBottom: 40 },
   card: {
     backgroundColor: CARD,
-    borderRadius: 18,
+    borderRadius: 20,
     padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: '#EEF0F4',
     shadowColor: '#000',
     shadowOpacity: 0.04,
-    shadowRadius: 8,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 1.5,
+    elevation: 2,
   },
   bizImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 14,
-    marginRight: 12,
+    width: 62,
+    height: 62,
+    borderRadius: 16,
+    marginRight: 14,
     backgroundColor: '#F3F4F6',
   },
   avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 14,
-    backgroundColor: ORANGE + '15',
+    width: 62,
+    height: 62,
+    borderRadius: 16,
+    backgroundColor: '#FFF3EB',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 14,
+    borderWidth: 1,
+    borderColor: '#FFE4D6',
   },
-  avatarText: { fontSize: 22, fontWeight: '700', color: ORANGE },
-  info: { flex: 1, marginRight: 6 },
-  bizName: { fontSize: 15, fontWeight: '700', color: TEXT, letterSpacing: -0.2 },
-  bizSub: { fontSize: 13, color: SECONDARY, marginTop: 2 },
-  bizMeta: { fontSize: 11, color: SECONDARY, marginTop: 4 },
-  bizMetaDate: { fontSize: 11, color: SECONDARY, marginTop: 2 },
+  avatarText: { fontSize: 24, fontWeight: '700', color: ORANGE },
+  info: { flex: 1, marginRight: 10, justifyContent: 'center' },
+  bizName: { fontSize: 15, fontWeight: '700', color: TEXT, letterSpacing: -0.2, lineHeight: 20 },
+  bizSub: { fontSize: 13, fontWeight: '500', color: SECONDARY, marginTop: 2, marginBottom: 4 },
+  bizMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'nowrap',
+    marginTop: 2,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+  },
+  metaItemDate: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  metaIcon: {
+    fontSize: 11,
+    marginRight: 3,
+  },
+  bizMetaText: {
+    fontSize: 11,
+    fontWeight: '400',
+    color: SECONDARY,
+  },
+  bizMetaDot: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    marginHorizontal: 5,
+  },
 
   statusBadge: {
     flexDirection: 'row',
@@ -404,15 +484,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF7ED',
     borderWidth: 1,
     borderColor: '#FED7AA',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
     gap: 4,
+    alignSelf: 'center',
   },
   statusBadgeApproved: { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' },
   statusBadgeRejected: { backgroundColor: '#FEF2F2', borderColor: '#FECACA' },
-  statusBadgeIcon: { fontSize: 10 },
-  statusBadgeText: { fontSize: 11, fontWeight: '700', color: '#EA580C' },
+  statusBadgeIcon: { fontSize: 11 },
+  statusBadgeText: { fontSize: 12, fontWeight: '700', color: '#EA580C' },
   statusBadgeTextApproved: { color: '#16A34A' },
   statusBadgeTextRejected: { color: '#DC2626' },
 

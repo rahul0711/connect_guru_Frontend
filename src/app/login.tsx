@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -240,9 +241,16 @@ export default function LoginScreen() {
             <Text style={styles.backArrow}>←</Text>
           </Pressable>
 
-          <Text style={styles.brandTitle}>
-            Connect<Text style={{ color: ORANGE }}>Guru</Text>
-          </Text>
+          <View style={styles.brandLogoWrapper}>
+            <Image
+              source={require('@/assets/logo/logo.png')}
+              style={styles.brandLogoIcon}
+              contentFit="contain"
+            />
+            <Text style={styles.brandTitleText}>
+              Connect<Text style={{ color: ORANGE }}>Guru</Text>
+            </Text>
+          </View>
           <Text style={styles.brandSubtitle}>Welcome Back! Sign in to continue</Text>
 
           {/* ── Login / Sign Up Tabs ── */}
@@ -484,11 +492,21 @@ const styles = StyleSheet.create({
   backBtn: { marginTop: 8, marginBottom: 8, alignSelf: 'flex-start', padding: 4 },
   backArrow: { fontSize: 22, color: TEXT },
 
-  brandTitle: {
+  brandLogoWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 10,
+    gap: 8,
+  },
+  brandLogoIcon: {
+    width: 48,
+    height: 48,
+  },
+  brandTitleText: {
     fontSize: 26,
     fontWeight: '900',
     color: TEXT,
-    textAlign: 'center',
     letterSpacing: -0.6,
   },
   brandSubtitle: {
