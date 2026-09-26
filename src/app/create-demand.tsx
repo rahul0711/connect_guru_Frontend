@@ -3,9 +3,7 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
 import { createDemand, getPublicCategories } from '@/services/user';
 import { type Category, resolveCategoryId } from '@/services/admin';
 
@@ -97,9 +96,7 @@ export default function CreateDemandScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={{ flex: 1 }}>
         
         {/* Header */}
         <View style={styles.header}>
@@ -110,7 +107,7 @@ export default function CreateDemandScreen() {
           <View style={{ width: 28 }} />
         </View>
 
-        <ScrollView
+        <KeyboardAwareScrollView
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled">
@@ -205,8 +202,8 @@ export default function CreateDemandScreen() {
               <Text style={styles.btnSubmitText}>Post Requirement</Text>
             )}
           </Pressable>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
+      </View>
 
       {/* Category Selection Modal */}
       <Modal visible={modalVisible} animationType="slide" transparent>

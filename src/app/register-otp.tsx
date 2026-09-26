@@ -3,11 +3,9 @@ import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -15,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
 import { registerOtp, sendOtp } from '@/services/auth';
 
 const ORANGE = '#E85D04';
@@ -203,10 +202,8 @@ export default function RegisterOtpScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView
+      <View style={{ flex: 1 }}>
+        <KeyboardAwareScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
@@ -420,8 +417,8 @@ export default function RegisterOtpScreen() {
             </>
           )}
 
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
+      </View>
 
       {/* ── Gender Picker Modal ── */}
       <Modal visible={genderPickerVisible} transparent animationType="fade">

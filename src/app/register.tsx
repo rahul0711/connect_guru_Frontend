@@ -3,10 +3,8 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -14,6 +12,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
+import DatePickerModal from '@/components/date-picker-modal';
+import { getApiErrorMessage } from '@/lib/api-error';
 import { registerUser, type RegisterPayload } from '@/services/auth';
 
 type Role = 'User' | 'Business';
@@ -48,6 +49,7 @@ export default function RegisterScreen() {
 
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showDobPicker, setShowDobPicker] = useState(false);
 
   // ── Submit ────────────────────────────────────────────
   const handleSignUp = async () => {
@@ -80,12 +82,10 @@ export default function RegisterScreen() {
       setLoading(true);
       const res = await registerUser(payload);
       Alert.alert('Success 🎉', res.message ?? 'Account created successfully!', [
-        { text: 'OK', onPress: () => router.replace('/') },
+        { text: 'Go to Login', onPress: () => router.replace('/login') },
       ]);
     } catch (err: any) {
-      const msg =
-        err?.response?.data?.message ?? 'Something went wrong. Please try again.';
-      Alert.alert('Registration Failed', msg);
+      Alert.alert('Registration Failed', getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -93,10 +93,8 @@ export default function RegisterScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView
+      <View style={{ flex: 1 }}>
+        <KeyboardAwareScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
@@ -185,18 +183,19 @@ export default function RegisterScreen() {
 
             {/* 4. Date of Birth (Required for User) */}
             <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Date of Birth (DOB) <Text style={styles.req}>*</Text></Text>
-              <View style={styles.inputRow}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="YYYY-MM-DD (e.g. 2000-01-15)"
-                  placeholderTextColor={PLACEHOLDER}
-                  value={dateOfBirth}
-                  onChangeText={setDateOfBirth}
-                  keyboardType="numbers-and-punctuation"
-                />
+              <Text style={styles.label}>Date of Birth (DOB) {role === 'User' && <Text style={styles.req}>*</Text>}</Text>
+              <Pressable style={styles.inputRow} onPress={() => setShowDobPicker(true)}>
+                <Text style={[styles.input, !dateOfBirth && { color: PLACEHOLDER }]}>
+                  {dateOfBirth || 'Select your date of birth'}
+                </Text>
                 <Text style={styles.icon}>📅</Text>
-              </View>
+              </Pressable>
+              <DatePickerModal
+                visible={showDobPicker}
+                value={dateOfBirth}
+                onSelect={setDateOfBirth}
+                onClose={() => setShowDobPicker(false)}
+              />
             </View>
 
             {/* 5. Gender */}
@@ -319,8 +318,8 @@ export default function RegisterScreen() {
             </Pressable>
           </View>
 
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
+      </View>
     </SafeAreaView>
   );
 }

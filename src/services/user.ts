@@ -159,6 +159,11 @@ export type UserProfile = {
   dateOfBirth?: string;
   gender?: string;
   role?: string;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+  pincode?: string | null;
 };
 
 export type UpdateUserProfilePayload = {

@@ -68,6 +68,7 @@ function StatCard({
   );
 }
 
+import { AdminSideMenu } from '@/components/admin-side-menu';
 import { BusinessQuickViewModal } from '@/components/BusinessQuickViewModal';
 
 function RecentSubmissionItem({
@@ -196,6 +197,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [quickViewBiz, setQuickViewBiz] = useState<Business | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const loadData = async () => {
     try {
@@ -260,12 +262,7 @@ export default function AdminDashboard() {
       <View style={styles.topHeader}>
         <Pressable
           style={styles.headerIconButton}
-          onPress={() => Alert.alert('Admin Menu', 'Quick Actions', [
-            { text: 'Manage Businesses', onPress: () => router.push('/admin/businesses') },
-            { text: 'Manage Categories', onPress: () => router.push('/admin/categories') },
-            { text: 'Subscription Plans', onPress: () => router.push('/admin/plans') },
-            { text: 'Cancel', style: 'cancel' },
-          ])}>
+          onPress={() => setMenuOpen(true)}>
           <Text style={styles.hamburgerIcon}>☰</Text>
         </Pressable>
 
@@ -417,6 +414,13 @@ export default function AdminDashboard() {
           )}
         </View>
       </ScrollView>
+
+      <AdminSideMenu
+        visible={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        onLogout={handleLogout}
+        pendingCount={stats.pending}
+      />
 
       <BusinessQuickViewModal
         visible={!!quickViewBiz}

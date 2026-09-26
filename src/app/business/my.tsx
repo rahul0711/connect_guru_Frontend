@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -18,6 +17,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
 import {
   getMyBusiness,
   updateMyBusiness,
@@ -298,10 +298,8 @@ export default function MyBusinessProfileScreen() {
           </Pressable>
         </ScrollView>
       ) : (
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ScrollView
+        <View style={{ flex: 1 }}>
+          <KeyboardAwareScrollView
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
             refreshControl={
@@ -559,8 +557,8 @@ export default function MyBusinessProfileScreen() {
                 </Pressable>
               )}
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+          </KeyboardAwareScrollView>
+        </View>
       )}
 
       {/* ── Category Picker Modal ── */}

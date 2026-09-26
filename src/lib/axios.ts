@@ -29,8 +29,9 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Use console.warn to prevent Expo RedBox overlay popup during handled API errors
-    console.warn('[API Error]', error?.response?.data ?? error.message);
+    // console.log (not warn/error): warnings show a LogBox toast in dev that
+    // covers bottom buttons. Screens show their own Alert for handled errors.
+    console.log('[API Error]', error?.response?.data ?? error.message);
     return Promise.reject(error);
   },
 );

@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -17,8 +16,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { createBusinessListing } from '@/services/business';
-import { getPublicCategories } from '@/services/user';
+import { KeyboardAwareScrollView } from '@/components/keyboard-aware-scroll-view';
+import { getApiErrorMessage } from '@/lib/api-error';
+import { createBusinessListing, getMyBusiness } from '@/services/business';
+import { getPublicCategories, getUserProfile } from '@/services/user';
 import { type Category, resolveCategoryId } from '@/services/admin';
 
 const ORANGE = '#E85D04';
@@ -62,6 +63,36 @@ export default function CreateBusinessScreen() {
       }
     });
 
+    // Pre-fill contact & address from the user's profile (login data has no phone number)
+    getUserProfile()
+      .then(res => {
+        const p = res.data;
+        if (!p) return;
+        if (p.phoneNumber) setPhone(prev => prev || p.phoneNumber!);
+        if (p.email) setEmail(prev => prev || p.email!);
+        if (p.address) setAddress(p.address);
+        if (p.city) setCity(p.city);
+        if (p.state) setState(p.state);
+        if (p.country) setCountry(p.country);
+        if (p.pincode) setPincode(p.pincode);
+      })
+      .catch(() => {});
+
+    // Each account can only register one business
+    getMyBusiness()
+      .then(existing => {
+        if (!existing) return;
+        Alert.alert(
+          'Business Already Registered',
+          'Your account already has a registered business. You can view or edit it instead.',
+          [
+            { text: 'Stay Here', style: 'cancel' },
+            { text: 'Edit My Business', onPress: () => router.replace('/business/my') },
+          ],
+        );
+      })
+      .catch(() => {});
+
     getPublicCategories().then(res => {
       const active = (res.data ?? []).filter(c => c.isActive !== false);
       setCategories(active);
@@ -77,7 +108,7 @@ export default function CreateBusinessScreen() {
     }
 
     const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       quality: 0.8,
     });
@@ -88,8 +119,14 @@ export default function CreateBusinessScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!businessName.trim() || !phone.trim() || !city.trim() || !selectedCategory) {
-      Alert.alert('Missing Fields', 'Please enter Business Name, Phone Number, City, and select a Category.');
+    const missing = [
+      !businessName.trim() && 'Business Name',
+      !selectedCategory && 'Business Category',
+      !phone.trim() && 'Phone Number',
+      !city.trim() && 'City',
+    ].filter(Boolean);
+    if (missing.length > 0 || !selectedCategory) {
+      Alert.alert('Missing Fields', `Please fill in: ${missing.join(', ')}.`);
       return;
     }
 
@@ -141,8 +178,7 @@ export default function CreateBusinessScreen() {
         Alert.alert('Registration Error', res.message || 'Could not register business.');
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Failed to submit business listing.';
-      Alert.alert('Submission Failed', msg);
+      Alert.alert('Submission Failed', getApiErrorMessage(err, 'Failed to submit business listing.'));
     } finally {
       setLoading(false);
     }
@@ -150,7 +186,7 @@ export default function CreateBusinessScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={{ flex: 1 }}>
         {/* Header */}
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
@@ -160,7 +196,7 @@ export default function CreateBusinessScreen() {
           <View style={{ width: 28 }} />
         </View>
 
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <KeyboardAwareScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <Text style={styles.subtitle}>Register your business listing to respond to customer demands.</Text>
 
           {/* Business Name */}
@@ -323,8 +359,8 @@ export default function CreateBusinessScreen() {
               <Text style={styles.btnSubmitText}>Submit Business Registration</Text>
             )}
           </Pressable>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
+      </View>
 
       {/* Category Modal */}
       <Modal visible={modalVisible} animationType="slide" transparent>
@@ -379,7 +415,7 @@ const styles = StyleSheet.create({
   backArrow: { fontSize: 22, color: TEXT, fontWeight: '600' },
   headerTitle: { fontSize: 17, fontWeight: '700', color: TEXT, letterSpacing: -0.3 },
 
-  scroll: { padding: 20, paddingBottom: 40 },
+  scroll: { padding: 20, paddingBottom: 100 },
   subtitle: { fontSize: 13, color: SECONDARY, textAlign: 'center', marginBottom: 20 },
 
   fieldGroup: { marginBottom: 16 },
